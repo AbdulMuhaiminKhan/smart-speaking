@@ -227,9 +227,23 @@ export interface VoiceResult {
   tone_reasons: string[]
 }
 
+export interface EmotionPoint {
+  t: number
+  emotion: string
+  share: number
+}
+
 export interface BodyResult {
   eye_contact_series: TimePoint[]
   eye_contact_ratio: number | null
+  emotions: Record<string, number>
+  emotion_timeline: EmotionPoint[]
+}
+
+export interface VoiceEmotionResult {
+  emotions: Record<string, number>
+  dominant: string
+  timeline: EmotionPoint[]
 }
 
 const optional = <T,>(p: Promise<T>): Promise<T | null> => p.catch(() => null)
@@ -239,6 +253,7 @@ export const reportApi = {
   getPacing: (id: string) => request<PacingResult>(`/api/sessions/${id}/results/pacing`),
   getVoice: (id: string) => optional(request<VoiceResult>(`/api/sessions/${id}/results/voice`)),
   getBody: (id: string) => optional(request<BodyResult>(`/api/sessions/${id}/results/body`)),
+  getVoiceEmotion: (id: string) => optional(request<VoiceEmotionResult>(`/api/sessions/${id}/results/voice_emotion`)),
   pdfUrl: (id: string) => `/api/sessions/${id}/report.pdf`,
 }
 

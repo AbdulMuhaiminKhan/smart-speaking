@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Any
 
 from app.pipeline import body_features as bf
-from app.schemas.metrics import BodyMetrics, Segment, TimePoint
+from app.schemas.metrics import BodyMetrics, EmotionPoint, Segment, TimePoint
 
 log = logging.getLogger(__name__)
 
@@ -39,7 +39,9 @@ MIN_SEGMENT_S = {
     "hands_hidden": 15.0,
     "tense": 5.0,
     "fidget": 2.0,
+    "strong_emotion": 3.0,
 }
+NEGATIVE_EMOTIONS = {"sad", "angry", "fearful", "disgusted"}
 
 MODEL_URLS = {
     "pose": "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_full/float16/latest/pose_landmarker_full.task",
@@ -196,6 +198,14 @@ def aggregate(frames: list[FrameObs], sample_fps: float, duration_s: float) -> B
     ft = [f.t for f in face_frames]
     add("looking_away", [not f.face.eye_contact for f in face_frames if f.face], ft)
     add("tense", [f.face.expression == "tense" for f in face_frames if f.face], ft)
+    for emo in sorted(NEGATIVE_EMOTIONS):
+        for s, e in runs(
+            ft,
+            [bool(f.face and f.face.emotion == emo) for f in face_frames],
+            MIN_SEGMENT_S["strong_emotion"],
+            dt * FACE_EVERY * 1.5,
+        ):
+            segs.append(Segment(kind=f"emotion_{emo}", start=s, end=e))
     pt = [f.t for f in pose_frames]
     add("head_down", [f.posture.head_down for f in pose_frames if f.posture], pt)
     add("slouch", [f.posture.slouch for f in pose_frames if f.posture], pt)
@@ -208,6 +218,28 @@ def aggregate(frames: list[FrameObs], sample_fps: float, duration_s: float) -> B
 
     postures = [f.posture for f in pose_frames if f.posture]
     faces = [f.face for f in face_frames if f.face]
+
+    emotions = (
+        {emo: round(sum(f.emotion == emo for f in faces) / len(faces), 3) for emo in bf.EMOTIONS}
+        if faces
+        else {}
+    )
+    emotion_timeline = []
+    k = 0.0
+    while k < duration_s:
+        window = [
+            f.face.emotion for f in face_frames if f.face and k <= f.t < k + EYE_SERIES_WINDOW_S
+        ]
+        if window:
+            top = max(set(window), key=window.count)
+            emotion_timeline.append(
+                EmotionPoint(
+                    t=round(k + EYE_SERIES_WINDOW_S / 2, 2),
+                    emotion=top,
+                    share=round(window.count(top) / len(window), 3),
+                )
+            )
+        k += EYE_SERIES_WINDOW_S
     tilts = sorted(p.tilt_deg for p in postures)
     hands_ratio = _ratio(hand_visible_flags)
     return BodyMetrics(
@@ -237,6 +269,8 @@ def aggregate(frames: list[FrameObs], sample_fps: float, duration_s: float) -> B
         smile_ratio=_ratio([f.expression == "smiling" for f in faces]),
         tense_ratio=_ratio([f.expression == "tense" for f in faces]),
         neutral_ratio=_ratio([f.expression == "neutral" for f in faces]),
+        emotions=emotions,
+        emotion_timeline=emotion_timeline,
         segments=segs,
     )
 

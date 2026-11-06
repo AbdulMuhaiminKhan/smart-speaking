@@ -29,10 +29,11 @@ from app.pipeline import (
     scoring,
     transcribe,
     voice,
+    voice_emotion,
 )
 from app.pipeline import issues as issues_mod
 from app.pipeline.errors import PipelineError
-from app.schemas.metrics import BodyMetrics, PronunciationMetrics
+from app.schemas.metrics import BodyMetrics, PronunciationMetrics, VoiceEmotionMetrics
 from app.services.storage import session_dir
 
 log = logging.getLogger(__name__)
@@ -51,7 +52,8 @@ STAGES = {
     "transcribe": Stage("transcribe", 0.04, 0.55),
     "language": Stage("language", 0.55, 0.57),
     "voice": Stage("voice", 0.57, 0.62),
-    "pronunciation": Stage("pronunciation", 0.62, 0.72),
+    "pronunciation": Stage("pronunciation", 0.62, 0.70),
+    "emotion": Stage("emotion", 0.70, 0.72),
     "body": Stage("body", 0.72, 0.85),
     "report": Stage("report", 0.85, 0.86),
     "coaching": Stage("coaching", 0.86, 1.0),
@@ -159,6 +161,14 @@ def analyze_session(session_id: str) -> None:
             except Exception:
                 log.exception("pronunciation analysis failed for session %s", session_id)
 
+            progress.stage("emotion")
+            emo_m: VoiceEmotionMetrics | None = None
+            try:
+                emo_m = voice_emotion.run(audio_path, transcript, settings.models_dir)
+                save_result(db, sid, "voice_emotion", emo_m.model_dump())
+            except Exception:
+                log.exception("voice emotion failed for session %s", session_id)
+
             body_m: BodyMetrics | None = None
             if info.has_video:
                 progress.stage("body")
@@ -213,6 +223,15 @@ def analyze_session(session_id: str) -> None:
                 body=body_m,
                 pronunciation=pron_m,
             )
+            # Emotion highlights feed the AI coach as facts (estimates, never scored alone).
+            if body_m is not None and body_m.emotions:
+                shown = {k: v for k, v in body_m.emotions.items() if k != "neutral" and v >= 0.05}
+                rep.highlights["face_emotions"] = (
+                    ", ".join(f"{k} {v:.0%}" for k, v in sorted(shown.items(), key=lambda x: -x[1]))
+                    or "mostly neutral"
+                )
+            if emo_m is not None and len(emo_m.timeline) >= 2:
+                rep.highlights["voice_emotion"] = f"mostly {emo_m.dominant}"
             save_result(db, sid, "report", rep.model_dump())  # template version first
 
             if settings.llm_enabled:

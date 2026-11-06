@@ -87,6 +87,14 @@
   {% endfor %}
   {% endif %}
 
+  {% if emotions %}
+  <h2>Emotions <span class="muted small">(estimates)</span></h2>
+  <div class="cols">
+    {% if emotions.face %}<div><h3>Face</h3><table>{% for e in emotions.face %}<tr><td>{{ e.label }}</td><td>{{ e.pct }}%</td></tr>{% endfor %}</table></div>{% endif %}
+    {% if emotions.voice %}<div><h3>Voice</h3><table>{% for e in emotions.voice %}<tr><td>{{ e.label }}</td><td>{{ e.pct }}%</td></tr>{% endfor %}</table></div>{% endif %}
+  </div>
+  {% endif %}
+
   <h2>Mistakes timeline</h2>
   {% if issues %}
   <table>

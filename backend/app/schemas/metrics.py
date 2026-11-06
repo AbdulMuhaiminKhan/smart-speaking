@@ -124,6 +124,12 @@ class Segment(BaseModel):
     end: float
 
 
+class EmotionPoint(BaseModel):
+    t: float  # window centre in seconds
+    emotion: str
+    share: float  # share of the window's frames showing it
+
+
 class BodyMetrics(BaseModel):
     sample_fps: float
     frames_analyzed: int
@@ -153,6 +159,10 @@ class BodyMetrics(BaseModel):
     smile_ratio: float | None
     tense_ratio: float | None
     neutral_ratio: float | None
+    # Facial emotion (estimate): share of face frames per emotion, and the
+    # most common emotion in each 5 s window.
+    emotions: dict[str, float] = {}
+    emotion_timeline: list[EmotionPoint] = []
 
     segments: list[Segment]
 
@@ -178,3 +188,13 @@ class PronunciationMetrics(BaseModel):
     low_confidence_ratio: float  # share of words Whisper was unsure about
     unclear_per_100_words: float
     unclear_words: list[UnclearWord]
+
+
+# ---- Voice emotion ----------------------------------------------------------
+
+
+class VoiceEmotionMetrics(BaseModel):
+    model: str
+    emotions: dict[str, float]  # average probability per emotion over speech windows
+    dominant: str
+    timeline: list[EmotionPoint]  # most likely emotion per window

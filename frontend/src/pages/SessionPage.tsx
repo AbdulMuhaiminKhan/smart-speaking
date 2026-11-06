@@ -9,6 +9,7 @@ import {
   type PracticeSession,
   type Report,
   type Transcript,
+  type VoiceEmotionResult,
   type VoiceResult,
 } from '../api/client'
 import { ProgressBar } from '../components/ProgressBar'
@@ -30,6 +31,7 @@ export function SessionPage() {
   const [pacing, setPacing] = useState<PacingResult | null>(null)
   const [voice, setVoice] = useState<VoiceResult | null>(null)
   const [body, setBody] = useState<BodyResult | null>(null)
+  const [voiceEmotion, setVoiceEmotion] = useState<VoiceEmotionResult | null>(null)
   const [duration, setDuration] = useState(0)
   const [error, setError] = useState<string | null>(null)
   const [currentTime, setCurrentTime] = useState(0)
@@ -71,6 +73,7 @@ export function SessionPage() {
       reportApi.getPacing(id).then(setPacing).catch(() => setPacing(null))
       void reportApi.getVoice(id).then(setVoice)
       void reportApi.getBody(id).then(setBody)
+      void reportApi.getVoiceEmotion(id).then(setVoiceEmotion)
     }
   }, [session?.status, id, transcript])
 
@@ -249,7 +252,17 @@ export function SessionPage() {
         </section>
       </div>
 
-      {report && <ReportView report={report} pacing={pacing} voice={voice} body={body} onSeek={seek} />}
+      {report && (
+        <ReportView
+          report={report}
+          pacing={pacing}
+          voice={voice}
+          body={body}
+          voiceEmotion={voiceEmotion}
+          duration={duration || session.duration_s || 0}
+          onSeek={seek}
+        />
+      )}
     </div>
   )
 }

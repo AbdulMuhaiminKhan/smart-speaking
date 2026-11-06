@@ -250,3 +250,9 @@ categories:
       full: 0.35
       max_penalty: 20
       message: "The speech recognizer was unsure about {value:.0%} of your words, which often means mumbling or low volume."
+    - id: negative_emotion
+      metric: negative_emotion_ratio
+      above: 0.25
+      full: 0.6
+      max_penalty: 10
+      message: "Your face looked sad, angry, fearful or disgusted {value:.0%} of the time (an estimate)."

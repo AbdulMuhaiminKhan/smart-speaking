@@ -120,6 +120,7 @@ All models are free and open. Details and licenses: [docs/models.md](docs/models
 | faster-whisper base / small / large-v3-turbo | Transcript with word timestamps (Fast / Balanced / Accurate) | 145 MB / 480 MB / 1.6 GB |
 | facebook/wav2vec2-lv-60-espeak-cv-ft | Phoneme recognition for the pronunciation estimate | 1.26 GB |
 | espeak-ng (via phonemizer) | Expected pronunciation of each word | system package |
+| superb/wav2vec2-base-superb-er | Emotion in the voice (neutral, happy, angry, sad), estimate | 380 MB |
 | MediaPipe Pose Landmarker (full on the server, lite in the browser) | Posture, swaying, arms | 9 MB / 5.5 MB |
 | MediaPipe Face Landmarker | Eye contact (head pose, iris, eye-look), expression | 3.6 MB |
 | MediaPipe Hand Landmarker | Gestures, open hands, fidgeting, face touches | 7.5 MB |

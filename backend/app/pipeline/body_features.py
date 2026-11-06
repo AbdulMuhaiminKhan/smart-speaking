@@ -148,6 +148,8 @@ class FaceFrame:
     smile: float
     tense: float
     expression: str  # smiling | tense | neutral
+    emotion: str = "neutral"  # see EMOTIONS
+    emotion_scores: dict[str, float] | None = None
 
 
 def face(blendshapes: Mapping[str, float], matrix: Sequence[Sequence[float]] | None) -> FaceFrame:
@@ -173,7 +175,46 @@ def face(blendshapes: Mapping[str, float], matrix: Sequence[Sequence[float]] | N
         (b("mouthPressLeft") + b("mouthPressRight")) / 2,
     )
     expression = "smiling" if smile >= SMILE_MIN else "tense" if tense >= TENSE_MIN else "neutral"
-    return FaceFrame(yaw, pitch, gaze, eye_contact, smile, tense, expression)
+    emotion, scores = face_emotion(blendshapes)
+    return FaceFrame(yaw, pitch, gaze, eye_contact, smile, tense, expression, emotion, scores)
+
+
+EMOTIONS = ("neutral", "happy", "surprised", "sad", "angry", "fearful", "disgusted")
+EMOTION_MIN = 0.25  # below this, the face counts as neutral
+HAPPY_MIN = 0.35
+
+
+def face_emotion(blendshapes: Mapping[str, float]) -> tuple[str, dict[str, float]]:
+    """Basic facial emotion from MediaPipe blendshapes (FACS-style action units).
+
+    A transparent heuristic, not a trained emotion model. Jaw opening is
+    weighted low because it moves constantly while talking.
+    """
+
+    def b(*names: str) -> float:
+        return sum(float(blendshapes.get(n, 0.0)) for n in names) / len(names)
+
+    brow_up = (b("browInnerUp") + b("browOuterUpLeft", "browOuterUpRight")) / 2
+    scores = {
+        "happy": 0.7 * b("mouthSmileLeft", "mouthSmileRight")
+        + 0.3 * b("cheekSquintLeft", "cheekSquintRight"),
+        "surprised": 0.5 * brow_up + 0.4 * b("eyeWideLeft", "eyeWideRight") + 0.1 * b("jawOpen"),
+        "sad": 0.6 * b("mouthFrownLeft", "mouthFrownRight")
+        + 0.4 * b("browInnerUp")
+        - 0.3 * b("mouthSmileLeft", "mouthSmileRight"),
+        "angry": 0.6 * b("browDownLeft", "browDownRight")
+        + 0.2 * b("eyeSquintLeft", "eyeSquintRight")
+        + 0.2 * b("mouthPressLeft", "mouthPressRight"),
+        "fearful": 0.4 * b("eyeWideLeft", "eyeWideRight")
+        + 0.3 * b("browInnerUp")
+        + 0.3 * b("mouthStretchLeft", "mouthStretchRight"),
+        "disgusted": 0.6 * b("noseSneerLeft", "noseSneerRight")
+        + 0.4 * b("mouthUpperUpLeft", "mouthUpperUpRight"),
+    }
+    scores = {k: round(max(0.0, min(1.0, v)), 3) for k, v in scores.items()}
+    best = max(scores, key=lambda k: scores[k])
+    threshold = HAPPY_MIN if best == "happy" else EMOTION_MIN
+    return (best if scores[best] >= threshold else "neutral"), scores
 
 
 def hand_is_open(hand: Sequence[Pt]) -> bool:

@@ -171,6 +171,7 @@ def get_report_pdf(session_id: uuid.UUID, db: DbDep, user: UserDep) -> Response:
         pacing=results.get("pacing"),
         voice=results.get("voice"),
         body=results.get("body"),
+        voice_emotion=results.get("voice_emotion"),
     )
     safe = "".join(c if c.isalnum() or c in " -_" else "_" for c in ps.title).strip() or "report"
     return Response(

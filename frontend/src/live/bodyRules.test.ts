@@ -61,3 +61,14 @@ describe('bbox', () => {
     expect(bbox(pts, 0, false)).toEqual({ x: 0.2, y: 0.2, w: 0.2, h: 0.39999999999999997 })
   })
 })
+
+describe('faceEmotion (mirrors the backend tests)', () => {
+  it('classifies clear expressions and stays neutral while talking', async () => {
+    const { faceEmotion } = await import('./bodyRules')
+    expect(faceEmotion({}).emotion).toBe('neutral')
+    expect(faceEmotion({ mouthSmileLeft: 0.7, mouthSmileRight: 0.7, cheekSquintLeft: 0.4, cheekSquintRight: 0.4 }).emotion).toBe('happy')
+    expect(faceEmotion({ browDownLeft: 0.7, browDownRight: 0.7, mouthPressLeft: 0.4, mouthPressRight: 0.4 }).emotion).toBe('angry')
+    expect(faceEmotion({ mouthFrownLeft: 0.6, mouthFrownRight: 0.6, browInnerUp: 0.4 }).emotion).toBe('sad')
+    expect(faceEmotion({ jawOpen: 0.8 }).emotion).toBe('neutral')
+  })
+})

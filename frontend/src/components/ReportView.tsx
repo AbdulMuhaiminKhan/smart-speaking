@@ -1,4 +1,5 @@
-import type { BodyResult, Issue, PacingResult, Report, VoiceResult } from '../api/client'
+import type { BodyResult, Issue, PacingResult, Report, VoiceEmotionResult, VoiceResult } from '../api/client'
+import { EmotionsCard } from './EmotionsCard'
 import { LineChart, Radar } from './charts'
 import { CATEGORY_LABELS, CATEGORY_ORDER, scoreColor } from '../lib/categories'
 import { formatTime } from '../lib/format'
@@ -8,6 +9,8 @@ interface Props {
   pacing: PacingResult | null
   voice: VoiceResult | null
   body: BodyResult | null
+  voiceEmotion: VoiceEmotionResult | null
+  duration: number
   onSeek: (t: number) => void
 }
 
@@ -104,7 +107,7 @@ function Timeline({ issues, onSeek }: { issues: Issue[]; onSeek: (t: number) => 
   )
 }
 
-export function ReportView({ report, pacing, voice, body, onSeek }: Props) {
+export function ReportView({ report, pacing, voice, body, voiceEmotion, duration, onSeek }: Props) {
   return (
     <div className="space-y-6">
       <ScoreGrid report={report} />
@@ -145,6 +148,7 @@ export function ReportView({ report, pacing, voice, body, onSeek }: Props) {
       )}
 
       <Charts pacing={pacing} voice={voice} body={body} onSeek={onSeek} />
+      <EmotionsCard body={body} voiceEmotion={voiceEmotion} duration={duration} onSeek={onSeek} />
       <Timeline issues={report.issues} onSeek={onSeek} />
 
       <div className="grid gap-6 md:grid-cols-3">

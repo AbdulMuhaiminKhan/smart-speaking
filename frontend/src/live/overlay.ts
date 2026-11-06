@@ -3,6 +3,16 @@ import { FaceLandmarker, HandLandmarker, PoseLandmarker } from '@mediapipe/tasks
 import { bbox, checkFace, checkPosture, POSE, type Baseline, type FaceCheck, type P, type PostureCheck } from './bodyRules'
 import type { TrackResult } from './tracker'
 
+export const EMOTION_LABELS: Record<string, string> = {
+  neutral: 'Neutral',
+  happy: 'Happy',
+  surprised: 'Surprised',
+  sad: 'Sad',
+  angry: 'Angry',
+  fearful: 'Worried',
+  disgusted: 'Displeased',
+}
+
 export interface FrameChecks {
   face: FaceCheck | null
   posture: PostureCheck | null
@@ -42,7 +52,7 @@ function drawBox(ctx: CanvasRenderingContext2D, box: { x: number; y: number; w: 
     ctx.lineTo(cx, cy + dy * c)
     ctx.stroke()
   }
-  const font = Math.max(12, W / 60)
+  const font = Math.max(14, W / 45)
   ctx.font = `600 ${font}px Inter, system-ui, sans-serif`
   const tw = ctx.measureText(label).width + font
   const ly = y - font * 1.6 < 0 ? y + h : y - font * 1.6
@@ -139,7 +149,7 @@ export function drawFrame(ctx: CanvasRenderingContext2D, r: TrackResult, aspect:
     drawLines(ctx, pts, FaceLandmarker.FACE_LANDMARKS_LEFT_IRIS, color, 0)
     drawLines(ctx, pts, FaceLandmarker.FACE_LANDMARKS_RIGHT_IRIS, color, 0)
     const box = bbox(pts, 0.01, false)
-    if (box) drawBox(ctx, box, color, face.smiling ? `${face.label} · smiling` : face.label)
+    if (box) drawBox(ctx, box, color, `${face.label} · ${EMOTION_LABELS[face.emotion]}`)
   }
 
   const hands = r.hands?.landmarks ?? []

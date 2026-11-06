@@ -186,6 +186,7 @@ METRIC_LABELS = {
     "face_touches_per_min": "face touches per minute",
     "sway_ratio": "share of time swaying",
     "tense_ratio": "share of time with a tense face",
+    "negative_emotion_ratio": "share of time the face looked sad, angry, fearful or disgusted",
 }
 
 _PERCENT_METRICS = {

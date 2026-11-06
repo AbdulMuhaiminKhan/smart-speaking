@@ -203,6 +203,10 @@ BODY_ISSUES: dict[str, tuple[Category, Severity, str]] = {
     "fidget": ("body_language", "minor", "Fidgeting with your hands"),
     "sway": ("body_language", "minor", "Swaying side to side"),
     "tense": ("body_language", "minor", "Tense facial expression"),
+    "emotion_sad": ("body_language", "info", "Face looked sad (estimate)"),
+    "emotion_angry": ("body_language", "info", "Face looked angry or stern (estimate)"),
+    "emotion_fearful": ("body_language", "info", "Face looked worried (estimate)"),
+    "emotion_disgusted": ("body_language", "info", "Face looked displeased (estimate)"),
 }
 
 

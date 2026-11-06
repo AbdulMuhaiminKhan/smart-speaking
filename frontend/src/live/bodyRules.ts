@@ -65,9 +65,32 @@ export interface Baseline {
   down: number
 }
 
+export const EMOTIONS = ['neutral', 'happy', 'surprised', 'sad', 'angry', 'fearful', 'disgusted'] as const
+export type Emotion = (typeof EMOTIONS)[number]
+
+/** Mirrors face_emotion() in backend/app/pipeline/body_features.py. */
+export function faceEmotion(shapes: Record<string, number>): { emotion: Emotion; scores: Record<string, number> } {
+  const b = (...names: string[]) => names.reduce((a, n) => a + (shapes[n] ?? 0), 0) / names.length
+  const browUp = (b('browInnerUp') + b('browOuterUpLeft', 'browOuterUpRight')) / 2
+  const smile = b('mouthSmileLeft', 'mouthSmileRight')
+  const raw: Record<string, number> = {
+    happy: 0.7 * smile + 0.3 * b('cheekSquintLeft', 'cheekSquintRight'),
+    surprised: 0.5 * browUp + 0.4 * b('eyeWideLeft', 'eyeWideRight') + 0.1 * b('jawOpen'),
+    sad: 0.6 * b('mouthFrownLeft', 'mouthFrownRight') + 0.4 * b('browInnerUp') - 0.3 * smile,
+    angry: 0.6 * b('browDownLeft', 'browDownRight') + 0.2 * b('eyeSquintLeft', 'eyeSquintRight') + 0.2 * b('mouthPressLeft', 'mouthPressRight'),
+    fearful: 0.4 * b('eyeWideLeft', 'eyeWideRight') + 0.3 * b('browInnerUp') + 0.3 * b('mouthStretchLeft', 'mouthStretchRight'),
+    disgusted: 0.6 * b('noseSneerLeft', 'noseSneerRight') + 0.4 * b('mouthUpperUpLeft', 'mouthUpperUpRight'),
+  }
+  const scores = Object.fromEntries(Object.entries(raw).map(([k, v]) => [k, Math.max(0, Math.min(1, v))]))
+  const best = Object.keys(scores).reduce((a, k) => (scores[k] > scores[a] ? k : a), 'happy')
+  const threshold = best === 'happy' ? 0.35 : 0.25
+  return { emotion: (scores[best] >= threshold ? best : 'neutral') as Emotion, scores }
+}
+
 export interface FaceCheck {
   eyeContact: boolean
   smiling: boolean
+  emotion: Emotion
   yaw: number
   pitch: number
   down: number
@@ -102,7 +125,8 @@ export function checkFace(shapes: Record<string, number>, matrix: number[] | nul
     up < RULES.GAZE_UP_MAX &&
     d < RULES.GAZE_DOWN_MAX
   const smiling = (b('mouthSmileLeft') + b('mouthSmileRight')) / 2 >= RULES.SMILE_MIN
-  return { eyeContact, smiling, yaw, pitch, down, label: eyeContact ? 'Eye contact' : 'Looking away' }
+  const { emotion } = faceEmotion(shapes)
+  return { eyeContact, smiling, emotion, yaw, pitch, down, label: eyeContact ? 'Eye contact' : 'Looking away' }
 }
 
 /** Bounding box of landmarks. Face and hand landmarks carry no visibility, so pass useVisibility=false. */

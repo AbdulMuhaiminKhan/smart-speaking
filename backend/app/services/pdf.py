@@ -23,6 +23,15 @@ LABELS = {
     "body_language": "Body language",
 }
 ORDER = list(LABELS)
+EMOTION_LABELS = {
+    "neutral": "Neutral",
+    "happy": "Happy",
+    "surprised": "Surprised",
+    "sad": "Sad",
+    "angry": "Angry",
+    "fearful": "Worried",
+    "disgusted": "Displeased",
+}
 MAX_ISSUES = 120
 
 
@@ -61,6 +70,7 @@ def render_html(
     pacing: dict[str, Any] | None = None,
     voice: dict[str, Any] | None = None,
     body: dict[str, Any] | None = None,
+    voice_emotion: dict[str, Any] | None = None,
 ) -> str:
     cats = report.scores.categories
     sections = []

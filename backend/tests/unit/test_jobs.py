@@ -6,7 +6,7 @@ import pytest
 
 from app.db.models import AnalysisResult, PracticeSession, SessionStatus
 from app.db.session import get_or_create_local_user, get_sessionmaker
-from app.pipeline import body, pronunciation, transcribe
+from app.pipeline import body, pronunciation, transcribe, voice_emotion
 from app.schemas.metrics import PronunciationMetrics
 from app.schemas.transcript import Segment, Transcript, Word
 from app.worker import jobs
@@ -64,6 +64,7 @@ def test_job_completes_and_stores_results(
 
     get_settings.cache_clear()
     monkeypatch.setattr(body, "run", lambda *a, **k: body.aggregate([], body.SAMPLE_FPS, 6.0))
+    monkeypatch.setattr(voice_emotion, "run", lambda *a, **k: voice_emotion.summarize([], []))
     monkeypatch.setattr(
         pronunciation,
         "run",
@@ -94,6 +95,7 @@ def test_job_completes_and_stores_results(
         "language",
         "voice",
         "pronunciation",
+        "voice_emotion",
         "body",
         "report",
     }

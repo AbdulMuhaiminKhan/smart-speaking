@@ -175,6 +175,22 @@ lighting, glasses and camera angle all affect tracking.
 
 \* Only when your hands are visible at least 30% of the time.
 
+- **Facial emotion** (estimate) from blendshapes, FACS-style: happy (smile and
+  cheek raise), surprised (raised brows and wide eyes; jaw opening counts only
+  a little because it moves while talking), sad (mouth corners down, inner
+  brows up), angry (brows down, eyes narrowed, lips pressed), worried/fearful
+  (wide eyes, inner brows up, lips stretched), displeased/disgusted (nose
+  wrinkle, upper lip raised). The strongest wins if it reaches 0.25 (0.35 for
+  happy); otherwise neutral. Sad, angry, worried or displeased for 3 seconds
+  or more shows on the timeline.
+- **Voice emotion** (estimate) from `superb/wav2vec2-base-superb-er`: neutral,
+  happy, angry or sad per 4 second window of speech. It is shown in the report
+  and given to the AI coach as context, but it does not change any score.
+
+| Category | Rule | Metric | Starts at | Full at | Max points |
+| --- | --- | --- | --- | --- | --- |
+| Body language | negative_emotion | share of face frames sad, angry, worried or displeased | 25% | 60% | 10 |
+
 **Not scored instead of guessed:** eye contact is not scored when your face is
 visible in less than 30% of the video. Posture and body language are not
 scored when your shoulders are visible in less than 30%. A video that is

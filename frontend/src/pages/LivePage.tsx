@@ -4,7 +4,7 @@ import { ApiError, uploadSession } from '../api/client'
 import { ProgressBar } from '../components/ProgressBar'
 import { LiveAudioStream, type LiveStats } from '../live/audioStream'
 import type { Baseline } from '../live/bodyRules'
-import { drawFrame, type FrameChecks } from '../live/overlay'
+import { drawFrame, EMOTION_LABELS, type FrameChecks } from '../live/overlay'
 import { BodyTracker } from '../live/tracker'
 import { extensionFor, Recording } from '../live/recorder'
 import { formatTime } from '../lib/format'
@@ -41,6 +41,8 @@ export function LivePage() {
   const calib = useRef<{ yaw: number[]; pitch: number[]; down: number[] }>({ yaw: [], pitch: [], down: [] })
   const eyeHistory = useRef<boolean[]>([])
   const eyeTotals = useRef({ yes: 0, all: 0 })
+  const emotionCounts = useRef<Record<string, number>>({})
+  const [emotionMix, setEmotionMix] = useState<[string, number][]>([])
   const [checks, setChecks] = useState<FrameChecks | null>(null)
   const [eyeRecent, setEyeRecent] = useState<number | null>(null)
   const [calibrating, setCalibrating] = useState(false)
@@ -90,6 +92,8 @@ export function LivePage() {
     calib.current = { yaw: [], pitch: [], down: [] }
     eyeHistory.current = []
     eyeTotals.current = { yes: 0, all: 0 }
+    emotionCounts.current = {}
+    setEmotionMix([])
     setCalibrating(true)
     const t0 = performance.now()
     let lastVideoTime = -1
@@ -134,12 +138,22 @@ export function LivePage() {
         if (eyeHistory.current.length > EYE_WINDOW) eyeHistory.current.shift()
         eyeTotals.current.all++
         if (eye) eyeTotals.current.yes++
+        if (frame.face) emotionCounts.current[frame.face.emotion] = (emotionCounts.current[frame.face.emotion] ?? 0) + 1
       }
       if (now - lastUi > 250) {
         lastUi = now
         setChecks(frame)
         const h = eyeHistory.current
         setEyeRecent(h.length >= 10 ? h.filter(Boolean).length / h.length : null)
+        const total = Object.values(emotionCounts.current).reduce((a, b) => a + b, 0)
+        if (total) {
+          setEmotionMix(
+            Object.entries(emotionCounts.current)
+              .map(([k, v]) => [k, v / total] as [string, number])
+              .sort((a, b) => b[1] - a[1])
+              .slice(0, 3),
+          )
+        }
       }
     }
     loopRef.current = requestAnimationFrame(tick)
@@ -166,7 +180,9 @@ export function LivePage() {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' },
-        audio: { echoCancellation: true, noiseSuppression: true, channelCount: 1 },
+        // Raw microphone: noise suppression and auto gain cut quiet speech and distort
+        // the volume metrics. Echo cancellation is not needed because nothing plays back.
+        audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false, channelCount: 1 },
       })
       streamRef.current = stream
       if (videoRef.current) {
@@ -252,26 +268,77 @@ export function LivePage() {
         </p>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_18rem]">
-        <div className="relative overflow-hidden rounded-xl bg-slate-900">
-          <video ref={videoRef} muted playsInline className="aspect-video w-full -scale-x-100 object-cover" />
-          <canvas ref={canvasRef} className="pointer-events-none absolute inset-0 h-full w-full object-cover" />
-          {phase === 'recording' && calibrating && (
-            <div className="absolute inset-x-0 bottom-4 mx-auto w-fit rounded-full bg-black/70 px-4 py-2 text-sm text-white">
-              Look at the camera for a moment…
-            </div>
-          )}
-          {phase === 'idle' && (
-            <div className="absolute inset-0 grid place-items-center text-slate-300">Camera is off</div>
-          )}
-          {phase === 'recording' && (
-            <div className="absolute left-3 top-3 flex items-center gap-2 rounded-full bg-black/60 px-3 py-1 text-sm text-white">
-              <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-red-500" />
-              {remaining !== null ? `${formatTime(remaining)} left` : formatTime(elapsed)}
-            </div>
-          )}
-        </div>
+      <div className="grid items-start gap-6 lg:grid-cols-[1fr_18rem]">
+        {/* Fixed 16:9 box: video and overlay share exactly the same area and cropping,
+            so the boxes stay on the body even when the side panel is taller. */}
+        <div className="space-y-4">
+          <div className="relative aspect-video overflow-hidden rounded-xl bg-slate-900">
+            <video ref={videoRef} muted playsInline className="absolute inset-0 h-full w-full -scale-x-100 object-cover" />
+            <canvas ref={canvasRef} className="pointer-events-none absolute inset-0 h-full w-full object-cover" />
+            {phase === 'recording' && calibrating && (
+              <div className="absolute inset-x-0 bottom-4 mx-auto w-fit rounded-full bg-black/70 px-4 py-2 text-sm text-white">
+                Look at the camera for a moment…
+              </div>
+            )}
+            {phase === 'idle' && (
+              <div className="absolute inset-0 grid place-items-center text-slate-300">Camera is off</div>
+            )}
+            {phase === 'recording' && (
+              <div className="absolute left-3 top-3 flex items-center gap-2 rounded-full bg-black/60 px-3 py-1 text-sm text-white">
+                <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-red-500" />
+                {remaining !== null ? `${formatTime(remaining)} left` : formatTime(elapsed)}
+              </div>
+            )}
+          </div>
 
+        {phase === 'idle' && (
+          <div className="flex flex-wrap items-end gap-4 rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+            <label className="min-w-56 flex-1">
+              <span className="text-sm font-medium">Title (optional)</span>
+              <input
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className="mt-1 w-full rounded-md border border-slate-300 bg-transparent px-3 py-2 dark:border-slate-700"
+              />
+            </label>
+            <div>
+              <span className="text-sm font-medium">Length</span>
+              <div className="mt-1 flex gap-2">
+                {[null, 60, 180, 300].map((s) => (
+                  <button
+                    key={String(s)}
+                    type="button"
+                    onClick={() => setTarget(s)}
+                    className={`rounded-md border px-3 py-2 text-sm ${
+                      target === s ? 'border-brand-600 bg-brand-50 dark:bg-slate-800' : 'border-slate-300 dark:border-slate-700'
+                    }`}
+                  >
+                    {s === null ? 'Free talk' : `${s / 60} min pitch`}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => void start()}
+              className="rounded-md bg-brand-600 px-5 py-2.5 font-medium text-white hover:bg-brand-700"
+            >
+              Start recording
+            </button>
+          </div>
+        )}
+        {phase === 'starting' && <p className="text-slate-500">Starting camera and microphone…</p>}
+        {phase === 'recording' && (
+          <button
+            type="button"
+            onClick={() => void stop()}
+            className="rounded-md bg-red-600 px-5 py-2.5 font-medium text-white hover:bg-red-700"
+          >
+            Stop and analyze
+          </button>
+        )}
+        {phase === 'uploading' && <ProgressBar value={uploadProgress} label="Saving your recording" />}
+        </div>
         <aside className="space-y-4">
           <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
             <p className="text-xs uppercase tracking-wide text-slate-500">Pace</p>
@@ -309,6 +376,13 @@ export function LivePage() {
               {checks ? `${checks.handsVisible} hand${checks.handsVisible === 1 ? '' : 's'} visible` : ''}
             </p>
           </div>
+          <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+            <p className="text-xs uppercase tracking-wide text-slate-500">Expression</p>
+            <p className="text-lg font-semibold">{checks?.face ? EMOTION_LABELS[checks.face.emotion] : '–'}</p>
+            <p className="text-sm text-slate-500">
+              {emotionMix.length ? emotionMix.map(([k, v]) => `${EMOTION_LABELS[k]} ${Math.round(v * 100)}%`).join(' · ') : 'Estimated from your face'}
+            </p>
+          </div>
           <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
             <input type="checkbox" checked={overlayOn} onChange={(e) => setOverlayOn(e.target.checked)} />
             Show tracking boxes
@@ -320,53 +394,6 @@ export function LivePage() {
         </aside>
       </div>
 
-      {phase === 'idle' && (
-        <div className="flex flex-wrap items-end gap-4 rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
-          <label className="min-w-56 flex-1">
-            <span className="text-sm font-medium">Title (optional)</span>
-            <input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className="mt-1 w-full rounded-md border border-slate-300 bg-transparent px-3 py-2 dark:border-slate-700"
-            />
-          </label>
-          <div>
-            <span className="text-sm font-medium">Length</span>
-            <div className="mt-1 flex gap-2">
-              {[null, 60, 180, 300].map((s) => (
-                <button
-                  key={String(s)}
-                  type="button"
-                  onClick={() => setTarget(s)}
-                  className={`rounded-md border px-3 py-2 text-sm ${
-                    target === s ? 'border-brand-600 bg-brand-50 dark:bg-slate-800' : 'border-slate-300 dark:border-slate-700'
-                  }`}
-                >
-                  {s === null ? 'Free talk' : `${s / 60} min pitch`}
-                </button>
-              ))}
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={() => void start()}
-            className="rounded-md bg-brand-600 px-5 py-2.5 font-medium text-white hover:bg-brand-700"
-          >
-            Start recording
-          </button>
-        </div>
-      )}
-      {phase === 'starting' && <p className="text-slate-500">Starting camera and microphone…</p>}
-      {phase === 'recording' && (
-        <button
-          type="button"
-          onClick={() => void stop()}
-          className="rounded-md bg-red-600 px-5 py-2.5 font-medium text-white hover:bg-red-700"
-        >
-          Stop and analyze
-        </button>
-      )}
-      {phase === 'uploading' && <ProgressBar value={uploadProgress} label="Saving your recording" />}
 
       {trackerNote && <p className="rounded-md bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-200">{trackerNote}</p>}
       {notice && <p className="rounded-md bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-200">{notice}</p>}

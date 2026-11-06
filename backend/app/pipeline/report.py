@@ -163,6 +163,12 @@ ADVICE: dict[str, Advice] = {
         fix="Project a little more and keep your mouth unobstructed by hands or the microphone.",
         drill="Record yourself reading a news article aloud and check that every word comes through.",
     ),
+    "negative_emotion": Advice(
+        title="Let your face match your message",
+        why="People read your face before they process your words; a worried or stern look can undercut a positive message.",
+        fix="Relax your forehead and jaw, and smile when you greet the audience and at key positive points.",
+        drill="Record your opening line three times: once neutral, once with a smile, once with energy. Keep the version that feels most natural.",
+    ),
     "low_eye_contact": Advice(
         title="Look at the camera",
         why="The camera is your audience's eyes. Looking away reads as unsure or distracted.",

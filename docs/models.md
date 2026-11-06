@@ -10,6 +10,7 @@ first use into the `models` volume (backend) or `frontend/public/mediapipe`
 | faster-whisper base / small / large-v3-turbo | Transcript (Fast / Balanced / Accurate preset) | Worker, CPU int8 or CUDA | 145 MB / 480 MB / 1.6 GB | MIT |
 | [facebook/wav2vec2-lv-60-espeak-cv-ft](https://huggingface.co/facebook/wav2vec2-lv-60-espeak-cv-ft) | Phoneme recognition | Worker | 1.26 GB | Apache 2.0 |
 | [espeak-ng](https://github.com/espeak-ng/espeak-ng) via phonemizer | Expected phonemes per word | Worker | system package | GPL 3 (run as a separate library, not modified) |
+| [superb/wav2vec2-base-superb-er](https://huggingface.co/superb/wav2vec2-base-superb-er) | Voice emotion (neutral, happy, angry, sad) | Worker | 380 MB | Apache 2.0 |
 | [MediaPipe](https://ai.google.dev/edge/mediapipe) Pose Landmarker full / lite | Posture, arms, swaying | Worker (full), browser (lite) | 9 MB / 5.5 MB | Apache 2.0 |
 | MediaPipe Face Landmarker | Head pose, iris, eye-look and expression blendshapes | Worker and browser | 3.6 MB | Apache 2.0 |
 | MediaPipe Hand Landmarker | Gestures, open hands, fidgeting, face touches | Worker and browser | 7.5 MB | Apache 2.0 |

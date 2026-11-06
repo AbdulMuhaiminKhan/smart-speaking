@@ -182,6 +182,11 @@ def derived_metrics(
             face_touches_per_min=body.face_touch_count / minutes,
             sway_ratio=body.sway_ratio,
             tense_ratio=body.tense_ratio,
+            negative_emotion_ratio=(
+                sum(body.emotions.get(e, 0.0) for e in ("sad", "angry", "fearful", "disgusted"))
+                if body.emotions
+                else None
+            ),
         )
     return m
 

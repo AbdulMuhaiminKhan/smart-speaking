@@ -16,6 +16,7 @@ export const STAGE_LABELS: Record<string, string> = {
   language: 'Checking pace, pauses and word choice',
   voice: 'Analyzing pitch, volume and tone',
   pronunciation: 'Checking pronunciation',
+  emotion: 'Listening for emotion in your voice',
   body: 'Tracking eye contact, posture and gestures',
   report: 'Scoring your talk',
   coaching: 'Your local AI coach is writing feedback',
