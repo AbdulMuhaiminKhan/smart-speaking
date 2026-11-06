@@ -230,3 +230,23 @@ categories:
       full: 0.7
       max_penalty: 10
       message: "Your face looked tense {value:.0%} of the time."
+
+  pronunciation:
+    - id: unclear_words
+      metric: unclear_per_100_words
+      above: 2
+      full: 12
+      max_penalty: 40
+      message: "About {value:.1f} in every 100 words may have been unclear or mispronounced (an estimate)."
+    - id: low_phoneme_match
+      metric: phoneme_similarity
+      below: 0.85
+      full: 0.6
+      max_penalty: 30
+      message: "Your sounds matched the expected pronunciation {value:.0%} on average (an estimate)."
+    - id: hard_to_transcribe
+      metric: low_confidence_ratio
+      above: 0.1
+      full: 0.35
+      max_penalty: 20
+      message: "The speech recognizer was unsure about {value:.0%} of your words, which often means mumbling or low volume."

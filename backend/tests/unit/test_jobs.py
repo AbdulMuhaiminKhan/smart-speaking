@@ -6,7 +6,8 @@ import pytest
 
 from app.db.models import AnalysisResult, PracticeSession, SessionStatus
 from app.db.session import get_or_create_local_user, get_sessionmaker
-from app.pipeline import body, transcribe
+from app.pipeline import body, pronunciation, transcribe
+from app.schemas.metrics import PronunciationMetrics
 from app.schemas.transcript import Segment, Transcript, Word
 from app.worker import jobs
 from tests.conftest import make_test_video, requires_ffmpeg
@@ -59,6 +60,18 @@ def test_job_completes_and_stores_results(
 ) -> None:
     monkeypatch.setattr(transcribe, "run", fake_transcribe)
     monkeypatch.setattr(body, "run", lambda *a, **k: body.aggregate([], body.SAMPLE_FPS, 6.0))
+    monkeypatch.setattr(
+        pronunciation,
+        "run",
+        lambda *a, **k: PronunciationMetrics(
+            method="phonemes",
+            words_checked=3,
+            mean_similarity=0.9,
+            low_confidence_ratio=0.0,
+            unclear_per_100_words=0.0,
+            unclear_words=[],
+        ),
+    )
     sid = make_session(make_test_video(settings_env / "clip.mp4"))
 
     jobs.analyze_session(sid)
@@ -70,7 +83,16 @@ def test_job_completes_and_stores_results(
     assert ps.progress == 1.0
     assert ps.duration_s == pytest.approx(6.0, abs=0.2)
     steps = {r.step for r in db.query(AnalysisResult).filter_by(session_id=ps.id)}
-    assert steps == {"media", "transcript", "pacing", "language", "voice", "body", "report"}
+    assert steps == {
+        "media",
+        "transcript",
+        "pacing",
+        "language",
+        "voice",
+        "pronunciation",
+        "body",
+        "report",
+    }
 
 
 @requires_ffmpeg

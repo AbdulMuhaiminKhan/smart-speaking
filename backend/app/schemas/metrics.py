@@ -155,3 +155,26 @@ class BodyMetrics(BaseModel):
     neutral_ratio: float | None
 
     segments: list[Segment]
+
+
+# ---- Pronunciation ----------------------------------------------------------
+
+
+class UnclearWord(BaseModel):
+    word: str
+    start: float
+    end: float
+    expected: str  # IPA from espeak, phones separated by spaces
+    heard: str  # IPA recognized by wav2vec2
+    similarity: float  # 0..1, 1 = matches the expected phonemes
+    whisper_probability: float
+    reason: Literal["mispronounced", "unclear"]
+
+
+class PronunciationMetrics(BaseModel):
+    method: Literal["phonemes", "whisper_only"]
+    words_checked: int
+    mean_similarity: float | None  # average phoneme match over checked words
+    low_confidence_ratio: float  # share of words Whisper was unsure about
+    unclear_per_100_words: float
+    unclear_words: list[UnclearWord]

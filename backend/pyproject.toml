@@ -19,6 +19,9 @@ dependencies = [
     "pyyaml>=6.0.3",
     "numpy>=2.4.6",
     "mediapipe>=1.2.2",
+    "torch>=2.15.0",
+    "transformers>=5.22.2",
+    "phonemizer>=3.6.0",
 ]
 
 [dependency-groups]

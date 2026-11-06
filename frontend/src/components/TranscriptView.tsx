@@ -13,6 +13,7 @@ const MARK: Record<string, string> = {
   filler: 'bg-amber-100 text-amber-900 dark:bg-amber-900/50 dark:text-amber-100',
   hedge: 'bg-violet-100 text-violet-900 dark:bg-violet-900/50 dark:text-violet-100',
   repetition: 'bg-sky-100 text-sky-900 dark:bg-sky-900/50 dark:text-sky-100',
+  mispronounced: 'bg-rose-100 text-rose-900 dark:bg-rose-900/50 dark:text-rose-100',
 }
 
 const PAUSE: Record<string, string> = {
@@ -27,6 +28,7 @@ export function TranscriptLegend() {
       <span className={`rounded px-1.5 ${MARK.filler}`}>filler</span>
       <span className={`rounded px-1.5 ${MARK.hedge}`}>hedge</span>
       <span className={`rounded px-1.5 ${MARK.repetition}`}>repeat</span>
+      <span className={`rounded px-1.5 ${MARK.mispronounced}`}>may be unclear (estimate)</span>
       <span className={PAUSE.effective}>‖ good pause</span>
       <span className={PAUSE.hesitation}>‖ hesitation</span>
       <span className={PAUSE.awkward}>‖ long silence</span>

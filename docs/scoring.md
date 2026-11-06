@@ -180,9 +180,41 @@ visible in less than 30% of the video. Posture and body language are not
 scored when your shoulders are visible in less than 30%. A video that is
 mostly dark (mean brightness under 50 of 255) gets a lighting warning.
 
-## Coming in later phases
+## Pronunciation
 
-Pronunciation (Phase 4) is shown as "not scored" until its analysis is built.
+**This is an estimate.** It compares your sounds with espeak's standard
+pronunciation (US English by default). Accents differ from that reference, so
+an accent can be flagged even when you are easy to understand. The report and
+the app say this next to the score.
+
+How it works:
+
+1. A wav2vec2 phoneme model (`facebook/wav2vec2-lv-60-espeak-cv-ft`) lists the
+   sounds (phonemes) it hears, every 20 ms, across the whole recording.
+2. espeak (through `phonemizer`) gives the expected phonemes for every word in
+   the transcript.
+3. For each Whisper segment, the heard phonemes are aligned against the
+   expected phonemes of its words (edit-distance alignment). Aligning a whole
+   segment is robust to word timestamps being slightly off. Similar sounds
+   (for example the vowels in "bit" and "beat", or t and d) cost less than
+   different ones.
+4. Each word gets a **phoneme match** from 0 to 1.
+5. A word is flagged as **may be mispronounced** when its match is under 0.45,
+   or as **unclear** when its match is under 0.65 and Whisper was also unsure
+   (confidence under 0.5).
+
+Skipped words, so the estimate stays fair: filler words, short function words
+("the", "and", "them", which are naturally reduced in speech), words under 3
+letters or 3 phonemes, numbers, acronyms ("LED") and capitalized words in mid
+sentence (names, which espeak often gets wrong). The category is not scored
+when fewer than 20 words can be checked. If the phoneme model cannot load,
+only very low Whisper confidence (under 0.3) is used to flag words.
+
+| Rule | Metric | Starts at | Full at | Max points |
+| --- | --- | --- | --- | --- |
+| unclear_words | flagged words per 100 words | 2 | 12 | 40 |
+| low_phoneme_match | average phoneme match | below 0.85 | 0.6 | 30 |
+| hard_to_transcribe | share of words Whisper was unsure about | 10% | 35% | 20 |
 
 ## Known limits
 

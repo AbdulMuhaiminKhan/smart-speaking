@@ -18,10 +18,20 @@ from sqlalchemy.orm import Session
 from app.config import MODEL_PRESETS, get_settings
 from app.db.models import AnalysisResult, PracticeSession, SessionStatus
 from app.db.session import get_sessionmaker
-from app.pipeline import body, language, pacing, preprocess, report, scoring, transcribe, voice
+from app.pipeline import (
+    body,
+    language,
+    pacing,
+    preprocess,
+    pronunciation,
+    report,
+    scoring,
+    transcribe,
+    voice,
+)
 from app.pipeline import issues as issues_mod
 from app.pipeline.errors import PipelineError
-from app.schemas.metrics import BodyMetrics
+from app.schemas.metrics import BodyMetrics, PronunciationMetrics
 from app.services.storage import session_dir
 
 log = logging.getLogger(__name__)
@@ -40,7 +50,8 @@ STAGES = {
     "transcribe": Stage("transcribe", 0.04, 0.55),
     "language": Stage("language", 0.55, 0.57),
     "voice": Stage("voice", 0.57, 0.62),
-    "body": Stage("body", 0.62, 0.97),
+    "pronunciation": Stage("pronunciation", 0.62, 0.72),
+    "body": Stage("body", 0.72, 0.97),
     "report": Stage("report", 0.97, 1.0),
 }
 
@@ -136,6 +147,16 @@ def analyze_session(session_id: str) -> None:
             voice_m = voice.run(audio_path, transcript, pacing_m, language_m.fillers_per_min)
             save_result(db, sid, "voice", voice_m.model_dump())
 
+            progress.stage("pronunciation")
+            pron_m: PronunciationMetrics | None = None
+            try:
+                pron_m = pronunciation.run(
+                    audio_path, transcript, settings.models_dir, ps.language or "en"
+                )
+                save_result(db, sid, "pronunciation", pron_m.model_dump())
+            except Exception:
+                log.exception("pronunciation analysis failed for session %s", session_id)
+
             body_m: BodyMetrics | None = None
             if info.has_video:
                 progress.stage("body")
@@ -157,20 +178,29 @@ def analyze_session(session_id: str) -> None:
                     log.exception("body analysis failed for session %s", session_id)
 
             progress.stage("report")
-            not_scored = {
-                "pronunciation": "Pronunciation analysis arrives in a later version.",
-                **scoring.body_not_scored(body_m, info.has_video),
-            }
+            not_scored = scoring.body_not_scored(body_m, info.has_video)
+            if pron_m is None:
+                not_scored["pronunciation"] = "Pronunciation analysis failed for this recording."
+            elif pron_m.words_checked < 20:
+                not_scored["pronunciation"] = (
+                    "Too few words to judge pronunciation fairly (at least 20 are needed)."
+                )
             scores = scoring.score(
                 pacing=pacing_m,
                 voice=voice_m,
                 language=language_m,
                 body=body_m,
+                pronunciation=pron_m,
                 duration_s=info.duration_s,
                 not_scored=not_scored,
             )
             issue_list = issues_mod.build(
-                pacing_m, voice_m, language_m, body_m, skip_categories=set(not_scored)
+                pacing_m,
+                voice_m,
+                language_m,
+                body_m,
+                skip_categories=set(not_scored),
+                pronunciation=pron_m,
             )
             rep = report.build(
                 scores=scores,
@@ -179,6 +209,7 @@ def analyze_session(session_id: str) -> None:
                 voice=voice_m,
                 language=language_m,
                 body=body_m,
+                pronunciation=pron_m,
             )
             save_result(db, sid, "report", rep.model_dump())
 

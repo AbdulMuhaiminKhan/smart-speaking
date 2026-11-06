@@ -18,6 +18,7 @@ from app.schemas.metrics import (
     Category,
     LanguageMetrics,
     PacingMetrics,
+    PronunciationMetrics,
     VoiceMetrics,
 )
 
@@ -103,6 +104,7 @@ def derived_metrics(
     language: LanguageMetrics | None,
     body: BodyMetrics | None = None,
     duration_s: float | None = None,
+    pronunciation: PronunciationMetrics | None = None,
 ) -> dict[str, float | None]:
     """Flat metric values the rules refer to by name."""
     m: dict[str, float | None] = {}
@@ -146,6 +148,13 @@ def derived_metrics(
                 else None
             ),
             script_coverage=language.script.coverage if language.script else None,
+        )
+    if pronunciation is not None:
+        enough = pronunciation.words_checked >= 20  # too few words to judge fairly
+        m.update(
+            unclear_per_100_words=pronunciation.unclear_per_100_words if enough else None,
+            phoneme_similarity=pronunciation.mean_similarity if enough else None,
+            low_confidence_ratio=pronunciation.low_confidence_ratio if enough else None,
         )
     if body is not None:
         minutes = max((duration_s or 60.0) / 60, 1e-6)
@@ -231,17 +240,19 @@ def score(
     voice: VoiceMetrics | None,
     language: LanguageMetrics | None,
     body: BodyMetrics | None = None,
+    pronunciation: PronunciationMetrics | None = None,
     duration_s: float | None = None,
     not_scored: dict[str, str] | None = None,
     rules: RuleSet | None = None,
 ) -> Scores:
     """Score every category. Categories without data are marked not_scored with a reason."""
     rules = rules or load_rules()
-    metrics = derived_metrics(pacing, voice, language, body, duration_s)
+    metrics = derived_metrics(pacing, voice, language, body, duration_s, pronunciation)
     available: dict[str, object] = {
         "pacing": pacing,
         "voice": voice,
         "language": language,
+        "pronunciation": pronunciation,
         "eye_contact": body,
         "posture": body,
         "body_language": body,

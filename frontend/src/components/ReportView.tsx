@@ -154,6 +154,15 @@ export function ReportView({ report, pacing, onSeek }: Props) {
                   <li key={w}>{w}</li>
                 ))}
               </ul>
+              {s.category === 'pronunciation' && (
+                <p className="mt-2 text-xs text-slate-500">
+                  This is an estimate. It compares your sounds with a standard US English reference, so accents can be
+                  flagged even when you are easy to understand.
+                </p>
+              )}
+              {(s.category === 'eye_contact' || s.category === 'posture' || s.category === 'body_language') && (
+                <p className="mt-2 text-xs text-slate-500">Estimated from camera tracking.</p>
+              )}
               {s.why_it_matters && <p className="mt-3 text-sm text-slate-500">{s.why_it_matters}</p>}
               {s.how_to_fix.length > 0 && (
                 <ul className="mt-3 space-y-1 text-sm">

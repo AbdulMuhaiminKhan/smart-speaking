@@ -11,6 +11,7 @@ from app.schemas.metrics import (
     Issue,
     LanguageMetrics,
     PacingMetrics,
+    PronunciationMetrics,
     Severity,
     TimePoint,
     VoiceMetrics,
@@ -228,14 +229,36 @@ def body_issues(b: BodyMetrics, skip: set[str]) -> list[Issue]:
     return out
 
 
+def pronunciation_issues(p: PronunciationMetrics) -> list[Issue]:
+    out: list[Issue] = []
+    for i, u in enumerate(p.unclear_words):
+        label = "may be mispronounced" if u.reason == "mispronounced" else "was unclear"
+        out.append(
+            Issue(
+                id=f"pron-{i}",
+                category="pronunciation",
+                kind="mispronounced",
+                start=u.start,
+                end=u.end,
+                severity="minor",
+                message=f'"{u.word}" {label} (estimate)',
+                text=u.word,
+            )
+        )
+    return out
+
+
 def build(
     pacing: PacingMetrics | None,
     voice: VoiceMetrics | None,
     language: LanguageMetrics | None,
     body: BodyMetrics | None = None,
     skip_categories: set[str] | None = None,
+    pronunciation: PronunciationMetrics | None = None,
 ) -> list[Issue]:
     issues: list[Issue] = []
+    if pronunciation and "pronunciation" not in (skip_categories or set()):
+        issues += pronunciation_issues(pronunciation)
     if body:
         issues += body_issues(body, skip_categories or set())
     if pacing:

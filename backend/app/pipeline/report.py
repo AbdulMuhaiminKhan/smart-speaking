@@ -12,7 +12,14 @@ from typing import Literal
 from pydantic import BaseModel
 
 from app.pipeline.scoring import Scores
-from app.schemas.metrics import BodyMetrics, Issue, LanguageMetrics, PacingMetrics, VoiceMetrics
+from app.schemas.metrics import (
+    BodyMetrics,
+    Issue,
+    LanguageMetrics,
+    PacingMetrics,
+    PronunciationMetrics,
+    VoiceMetrics,
+)
 
 
 class Advice(BaseModel):
@@ -138,6 +145,24 @@ ADVICE: dict[str, Advice] = {
         fix="Check the skipped passages and decide if they belong in the talk.",
         drill="Run through the script once reading, once from keywords only.",
     ),
+    "unclear_words": Advice(
+        title="Pronounce key words clearly",
+        why="Words that are hard to make out force listeners to guess.",
+        fix="Slow down on long or important words and open your mouth a little more.",
+        drill="Look up the flagged words, listen to a reference, and repeat each one slowly three times, then at normal speed.",
+    ),
+    "low_phoneme_match": Advice(
+        title="Articulate every sound",
+        why="Dropped or blurred sounds make speech harder to follow, especially on video calls.",
+        fix="Finish the last sound of each word, especially t, d, s and k.",
+        drill="Read a paragraph while exaggerating every consonant, then read it again normally.",
+    ),
+    "hard_to_transcribe": Advice(
+        title="Speak up and enunciate",
+        why="If a speech recognizer struggles, listeners at the back of the room will too.",
+        fix="Project a little more and keep your mouth unobstructed by hands or the microphone.",
+        drill="Record yourself reading a news article aloud and check that every word comes through.",
+    ),
     "low_eye_contact": Advice(
         title="Look at the camera",
         why="The camera is your audience's eyes. Looking away reads as unsure or distracted.",
@@ -231,6 +256,7 @@ ADVICE: dict[str, Advice] = {
 }
 
 CATEGORY_WHY: dict[str, str] = {
+    "pronunciation": "Clear pronunciation means no one has to work to understand you.",
     "eye_contact": "Eye contact builds trust and keeps people listening.",
     "posture": "Good posture looks confident and helps your voice carry.",
     "body_language": "Open, calm body language supports what you say.",
@@ -282,6 +308,7 @@ def strengths(
     language: LanguageMetrics | None,
     scores: Scores,
     body: BodyMetrics | None = None,
+    pronunciation: PronunciationMetrics | None = None,
 ) -> list[str]:
     """Positive observations, each tied to a metric with no penalty."""
     passed = {r.id for c in scores.categories.values() for r in c.rules if r.penalty == 0}
@@ -326,6 +353,12 @@ def strengths(
             out.append((1.8, "Varied vocabulary."))
         if language.script and "off_script" in passed:
             out.append((2.5, f"You covered {language.script.coverage:.0%} of your script."))
+    if (
+        pronunciation
+        and scores.categories["pronunciation"].status == "scored"
+        and {"unclear_words", "low_phoneme_match"} <= passed
+    ):
+        out.append((2.6, "Clear pronunciation."))
     if body:
         scored = {k for k, c in scores.categories.items() if c.status == "scored"}
         if "eye_contact" in scored and "low_eye_contact" in passed and body.eye_contact_ratio:
@@ -353,6 +386,7 @@ def build(
     voice: VoiceMetrics | None,
     language: LanguageMetrics | None,
     body: BodyMetrics | None = None,
+    pronunciation: PronunciationMetrics | None = None,
 ) -> Report:
     penalised = sorted(
         ((cat, r) for cat, c in scores.categories.items() for r in c.rules if r.penalty > 0),
@@ -422,7 +456,7 @@ def build(
     return Report(
         overall=scores.overall,
         scores=scores,
-        strengths=strengths(pacing, voice, language, scores, body),
+        strengths=strengths(pacing, voice, language, scores, body, pronunciation),
         gaps=gaps,
         top_fixes=top_fixes,
         sections=sections,
