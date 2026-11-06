@@ -96,9 +96,13 @@ def analyze_session(session_id: str) -> None:
 
         try:
             progress.stage("preprocess")
-            info, audio_path, warnings = preprocess.run(
+            info, audio_path, warnings, playable = preprocess.run(
                 Path(ps.media_path), work, settings.min_duration_s, settings.max_duration_s
             )
+            if playable != Path(ps.media_path):
+                # Keep only the repaired copy so the video can be seeked in the report.
+                Path(ps.media_path).unlink(missing_ok=True)
+                ps.media_path = str(playable)
             ps.duration_s = info.duration_s
             ps.warnings = warnings
             save_result(db, sid, "media", info.model_dump())

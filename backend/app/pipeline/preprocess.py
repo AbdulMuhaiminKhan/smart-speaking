@@ -24,6 +24,13 @@ ACCEPTED_FORMATS = {"mov", "mp4", "m4a", "3gp", "3g2", "mj2", "matroska", "webm"
 ACCEPTED_EXTENSIONS = {".mp4", ".webm", ".mov", ".m4v"}
 
 
+class MissingDurationError(UnsupportedFormatError):
+    """The container has no duration header (typical for browser MediaRecorder webm)."""
+
+    def __init__(self) -> None:
+        super().__init__("no duration")
+
+
 class MediaInfo(BaseModel):
     duration_s: float
     format_name: str
@@ -75,7 +82,7 @@ def parse_probe(probe: dict[str, Any]) -> MediaInfo:
         durations = [float(s["duration"]) for s in streams if s.get("duration")]
         duration = max(durations) if durations else None
     if duration is None:
-        raise UnsupportedFormatError("no duration")
+        raise MissingDurationError()
 
     return MediaInfo(
         duration_s=float(duration),
@@ -176,8 +183,46 @@ def extract_audio(src: Path, dest: Path) -> Path:
     return dest
 
 
-def run(src: Path, work_dir: Path, min_s: float, max_s: float) -> tuple[MediaInfo, Path, list[str]]:
-    info = probe(src)
+def repair_container(src: Path, dest: Path) -> Path:
+    """Rewrite the container without re-encoding so it gets a duration and seek index.
+
+    Browsers record webm as a live stream, so the file has no duration and
+    cannot be seeked. A stream copy fixes both in a second or two.
+    """
+    ffmpeg = require_binary("ffmpeg")
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    result = subprocess.run(
+        [
+            ffmpeg,
+            "-y",
+            "-v",
+            "error",
+            "-fflags",
+            "+genpts",
+            "-i",
+            str(src),
+            "-c",
+            "copy",
+            str(dest),
+        ],
+        capture_output=True,
+        text=True,
+        timeout=600,
+    )
+    if result.returncode != 0 or not dest.exists():
+        raise UnsupportedFormatError("the recording could not be repaired")
+    return dest
+
+
+def run(
+    src: Path, work_dir: Path, min_s: float, max_s: float
+) -> tuple[MediaInfo, Path, list[str], Path]:
+    """Returns (info, audio wav, warnings, playable media path)."""
+    try:
+        info = probe(src)
+    except MissingDurationError:
+        src = repair_container(src, work_dir / f"playable{src.suffix or '.webm'}")
+        info = probe(src)
     warnings = validate_media(info, min_s, max_s)
     audio = extract_audio(src, work_dir / "audio.wav")
-    return info, audio, warnings
+    return info, audio, warnings, src

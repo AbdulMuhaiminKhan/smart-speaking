@@ -112,7 +112,8 @@ def test_run_extracts_16k_mono_wav(tmp_path: Path) -> None:
     import wave
 
     clip = make_test_video(tmp_path / "clip.mp4", seconds=6)
-    info, audio, warnings = preprocess.run(clip, tmp_path / "work", 5, 930)
+    info, audio, warnings, playable = preprocess.run(clip, tmp_path / "work", 5, 930)
+    assert playable == clip
     assert info.has_video and info.has_audio
     assert warnings == []
     with wave.open(str(audio)) as wav:
@@ -134,3 +135,54 @@ def test_run_rejects_video_without_audio(tmp_path: Path) -> None:
     clip = make_test_video(tmp_path / "silent.mp4", seconds=6, audio=False)
     with pytest.raises(NoAudioError):
         preprocess.run(clip, tmp_path / "work", 5, 930)
+
+
+@requires_ffmpeg
+def test_browser_style_webm_without_duration_is_repaired(tmp_path: Path) -> None:
+    """MediaRecorder webm has no duration header; preprocessing must fix it."""
+    import subprocess
+
+    src = tmp_path / "live.webm"
+    # Writing to a pipe makes ffmpeg skip the duration and cues, like a browser does.
+    with src.open("wb") as out:
+        subprocess.run(
+            [
+                "ffmpeg",
+                "-v",
+                "error",
+                "-f",
+                "lavfi",
+                "-i",
+                "testsrc=size=320x240:rate=15:duration=6",
+                "-f",
+                "lavfi",
+                "-i",
+                "sine=frequency=220:duration=6",
+                "-shortest",
+                "-c:v",
+                "libvpx-vp9",
+                "-deadline",
+                "realtime",
+                "-c:a",
+                "libopus",
+                "-f",
+                "webm",
+                "pipe:1",
+            ],
+            check=True,
+            stdout=out,
+        )
+    import json
+
+    raw = json.loads(
+        subprocess.run(
+            ["ffprobe", "-v", "error", "-print_format", "json", "-show_format", str(src)],
+            capture_output=True,
+            text=True,
+        ).stdout
+    )
+    assert "duration" not in raw["format"]
+
+    info, _, _, playable = preprocess.run(src, tmp_path / "work", 5, 930)
+    assert playable != src and playable.exists()
+    assert info.duration_s == pytest.approx(6, abs=0.3)

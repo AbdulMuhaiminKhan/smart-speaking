@@ -57,6 +57,7 @@ export function LivePage() {
     setNotice(null)
     setStats(null)
     setPhase('starting')
+    const audioCtx = LiveAudioStream.createContext() // must happen before the first await
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' },
@@ -69,7 +70,9 @@ export function LivePage() {
       }
       const audio = new LiveAudioStream({ onStats: setStats, onError: setNotice })
       audioRef.current = audio
-      await audio.start(stream).catch(() => setNotice('Live feedback is unavailable. Recording still works.'))
+      await audio
+        .start(stream, audioCtx)
+        .catch(() => setNotice('Live feedback is unavailable. Recording still works.'))
       const rec = new Recording(stream)
       recRef.current = rec
       rec.start()
@@ -85,6 +88,7 @@ export function LivePage() {
             ? 'No camera or microphone was found.'
             : 'Could not start the camera and microphone.',
       )
+      void audioCtx.close()
       setPhase('idle')
     }
   }

@@ -35,7 +35,12 @@ export class LiveAudioStream {
     this.handlers = handlers
   }
 
-  async start(stream: MediaStream, lang = 'en'): Promise<void> {
+  /** Create the AudioContext inside the click handler, before any await, so it is allowed to run. */
+  static createContext(): AudioContext {
+    return new AudioContext()
+  }
+
+  async start(stream: MediaStream, ctx: AudioContext, lang = 'en'): Promise<void> {
     const proto = location.protocol === 'https:' ? 'wss' : 'ws'
     this.ws = new WebSocket(`${proto}://${location.host}/api/live/ws?lang=${encodeURIComponent(lang)}`)
     this.ws.binaryType = 'arraybuffer'
@@ -47,12 +52,18 @@ export class LiveAudioStream {
     }
     this.ws.onerror = () => this.handlers.onError('Live feedback is unavailable. Recording still works.')
 
-    this.ctx = new AudioContext({ sampleRate: 16000 })
-    await this.ctx.audioWorklet.addModule('/pcm-worklet.js')
+    this.ctx = ctx
+    // Browsers start an AudioContext paused unless a click allowed it; resume to be sure.
+    if (ctx.state !== 'running') await ctx.resume()
+    await ctx.audioWorklet.addModule('/pcm-worklet.js')
     this.source = this.ctx.createMediaStreamSource(stream)
     this.node = new AudioWorkletNode(this.ctx, 'pcm-capture')
     this.node.port.onmessage = (e: MessageEvent<Float32Array>) => this.push(e.data)
     this.source.connect(this.node)
+    // Some browsers only pull audio through nodes that reach the output; keep it silent.
+    const mute = ctx.createGain()
+    mute.gain.value = 0
+    this.node.connect(mute).connect(ctx.destination)
   }
 
   private push(chunk: Float32Array) {
