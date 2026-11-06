@@ -97,12 +97,12 @@ def test_voice_emotion_summary() -> None:
     m = ve.summarize(
         [(0, 4), (4, 8)],
         [
-            {"neutral": 0.2, "happy": 0.7, "angry": 0.05, "sad": 0.05},
-            {"neutral": 0.6, "happy": 0.3, "angry": 0.05, "sad": 0.05},
+            {"neutral": 0.1, "happy": 0.8, "angry": 0.05, "sad": 0.05},
+            {"neutral": 0.5, "happy": 0.4, "angry": 0.05, "sad": 0.05},
         ],
     )
     assert m.dominant == "happy"
-    assert m.emotions["happy"] == 0.5
+    assert m.emotions["happy"] == 0.6
     assert [p.emotion for p in m.timeline] == ["happy", "neutral"]
     assert ve.summarize([], []).emotions == {}
 
