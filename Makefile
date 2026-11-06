@@ -10,6 +10,9 @@ down:
 logs:
 	docker compose logs -f api worker
 
+# WeasyPrint (PDF export) needs Homebrew's Pango on macOS.
+export DYLD_FALLBACK_LIBRARY_PATH := /opt/homebrew/lib:/usr/local/lib:/usr/lib
+
 # Native development: Postgres and Redis in Docker, everything else on the host.
 dev-deps:
 	docker compose up -d postgres redis
@@ -24,11 +27,11 @@ web:
 	cd frontend && npm run dev
 
 test:
-	cd backend && uv run pytest
+	cd backend && uv run python -m pytest
 	cd frontend && npm run build
 
 e2e:
-	cd backend && uv run pytest -m e2e
+	cd backend && uv run python -m pytest -m e2e
 
 lint:
 	cd backend && uv run ruff check . && uv run ruff format --check . && uv run mypy app

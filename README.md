@@ -5,7 +5,7 @@ your voice, pacing, filler words, language, pronunciation, eye contact, posture 
 body language. Everything runs on your own machine with open-source models. Nothing
 is sent to any cloud service.
 
-> Status: Phase 4 of 6 (upload and live recording with tracking overlay, transcription, voice, pacing, language, pronunciation, eye contact, posture and body language, basic report). Scoring rules: [docs/scoring.md](docs/scoring.md).
+> Status: Phase 5 of 6 (upload and live recording with tracking overlay; transcription, voice, pacing, language, pronunciation, eye contact, posture and body language; AI-written coaching checked against the metrics; charts, video timeline and PDF export). Scoring rules: [docs/scoring.md](docs/scoring.md).
 
 ## Quick start (Docker)
 
@@ -60,6 +60,7 @@ language, pronunciation, body language, scoring and the LLM report.
 | --- | --- | --- |
 | faster-whisper tiny | Live words per minute and filler counter | 75 MB |
 | faster-whisper base / small / large-v3-turbo | Transcript with word timestamps (Fast / Balanced / Accurate) | 145 MB / 480 MB / 1.6 GB |
+| qwen2.5:7b via Ollama (default; llama3.1:8b also works) | Coaching text and sentence clarity, from metrics only | 4.7 GB |
 | facebook/wav2vec2-lv-60-espeak-cv-ft | Phoneme recognition for the pronunciation estimate | 1.26 GB |
 | espeak-ng (via phonemizer) | Expected pronunciation of each word | system package |
 | MediaPipe Pose Landmarker (full on the server, lite in the browser) | Posture, swaying, arms | 9 MB / 5.5 MB |

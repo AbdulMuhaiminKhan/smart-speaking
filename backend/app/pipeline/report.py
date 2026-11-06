@@ -290,8 +290,23 @@ class Fix(BaseModel):
     drill: str
 
 
+class ClarityExample(BaseModel):
+    original: str
+    suggestion: str
+
+
+class Clarity(BaseModel):
+    feedback: str
+    examples: list[ClarityExample]
+
+
 class Report(BaseModel):
     generated_by: Literal["template", "llm"] = "template"
+    llm_model: str | None = None
+    llm_error: str | None = None  # why the AI coach was not used, if it was not
+    llm_items_dropped: int = 0  # AI statements rejected for not matching the metrics
+    summary: str | None = None
+    clarity: Clarity | None = None
     overall: float | None
     scores: Scores
     strengths: list[str]

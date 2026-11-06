@@ -4,14 +4,17 @@ import {
   api,
   ApiError,
   reportApi,
+  type BodyResult,
   type PacingResult,
   type PracticeSession,
   type Report,
   type Transcript,
+  type VoiceResult,
 } from '../api/client'
 import { ProgressBar } from '../components/ProgressBar'
 import { StatusBadge } from '../components/StatusBadge'
 import { ReportView } from '../components/ReportView'
+import { VideoTimeline } from '../components/VideoTimeline'
 import { TranscriptLegend, TranscriptView } from '../components/TranscriptView'
 import { formatTime, STAGE_LABELS } from '../lib/format'
 
@@ -25,6 +28,9 @@ export function SessionPage() {
   const [transcript, setTranscript] = useState<Transcript | null>(null)
   const [report, setReport] = useState<Report | null>(null)
   const [pacing, setPacing] = useState<PacingResult | null>(null)
+  const [voice, setVoice] = useState<VoiceResult | null>(null)
+  const [body, setBody] = useState<BodyResult | null>(null)
+  const [duration, setDuration] = useState(0)
   const [error, setError] = useState<string | null>(null)
   const [currentTime, setCurrentTime] = useState(0)
 
@@ -63,13 +69,15 @@ export function SessionPage() {
       api.getTranscript(id).then(setTranscript).catch(() => setTranscript(null))
       reportApi.getReport(id).then(setReport).catch(() => setReport(null))
       reportApi.getPacing(id).then(setPacing).catch(() => setPacing(null))
+      void reportApi.getVoice(id).then(setVoice)
+      void reportApi.getBody(id).then(setBody)
     }
   }, [session?.status, id, transcript])
 
   const seek = (t: number) => {
     const v = videoRef.current
     if (!v) return
-    v.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    v.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
     v.currentTime = t
     void v.play()
   }
@@ -127,6 +135,15 @@ export function SessionPage() {
             {session.duration_s !== null && ` · ${formatTime(session.duration_s)}`}
           </p>
         </div>
+        <div className="flex gap-2">
+          {session.status === 'completed' && (
+            <a
+              href={reportApi.pdfUrl(id)}
+              className="rounded-md bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700"
+            >
+              Export PDF
+            </a>
+          )}
         <button
           type="button"
           onClick={() => void remove()}
@@ -134,6 +151,7 @@ export function SessionPage() {
         >
           Delete
         </button>
+        </div>
       </div>
 
       {running && (
@@ -181,17 +199,26 @@ export function SessionPage() {
         </ul>
       )}
 
-      {report && <ReportView report={report} pacing={pacing} onSeek={seek} />}
-
       <div className="grid gap-6 lg:grid-cols-2">
-        <video
-          ref={videoRef}
-          src={api.mediaUrl(id)}
-          controls
-          playsInline
-          onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
-          className="w-full rounded-xl bg-black"
-        />
+        <div className="space-y-3">
+          <video
+            ref={videoRef}
+            src={api.mediaUrl(id)}
+            controls
+            playsInline
+            onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
+            onLoadedMetadata={(e) => setDuration(Number.isFinite(e.currentTarget.duration) ? e.currentTarget.duration : 0)}
+            className="w-full rounded-xl bg-black"
+          />
+          {report && (
+            <VideoTimeline
+              issues={report.issues}
+              duration={duration || session.duration_s || 0}
+              currentTime={currentTime}
+              onSeek={seek}
+            />
+          )}
+        </div>
         <section className="rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
           <h2 className="mb-1 font-semibold">Transcript</h2>
           {transcript ? (
@@ -215,6 +242,8 @@ export function SessionPage() {
           )}
         </section>
       </div>
+
+      {report && <ReportView report={report} pacing={pacing} voice={voice} body={body} onSeek={seek} />}
     </div>
   )
 }

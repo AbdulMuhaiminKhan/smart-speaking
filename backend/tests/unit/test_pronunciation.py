@@ -10,13 +10,17 @@ def test_normalize_phones_maps_spelling_variants() -> None:
 
 def test_phone_similarity() -> None:
     assert pr.phone_similarity(["k", "æ", "t"], ["k", "æ", "t"]) == 1.0
-    assert pr.phone_similarity(["k", "æ", "t"], ["k", "ɛ", "t"]) == pytest.approx(1 - 0.4 / 3, abs=0.01)
+    assert pr.phone_similarity(["k", "æ", "t"], ["k", "ɛ", "t"]) == pytest.approx(
+        1 - 0.4 / 3, abs=0.01
+    )
     assert pr.phone_similarity(["k", "æ", "t"], ["d", "ɔ", "g"]) == 0.0
     assert pr.phone_similarity([], ["a"]) == 0.0
 
 
 def test_ctc_collapse() -> None:
-    assert pr.ctc_collapse(["<pad>", "k", "k", "<pad>", "æ", "æ", "t", "<pad>", "t"], {"<pad>"}) == ["k", "æ", "t", "t"]
+    assert pr.ctc_collapse(
+        ["<pad>", "k", "k", "<pad>", "æ", "æ", "t", "<pad>", "t"], {"<pad>"}
+    ) == ["k", "æ", "t", "t"]
 
 
 def test_align_words_is_robust_to_extra_phones_at_edges() -> None:
@@ -49,30 +53,60 @@ def w(text: str, start: float, prob: float = 0.95) -> Word:
 
 @pytest.mark.parametrize(
     "word,start,ok",
-    [("energy", False, True), ("the", False, False), ("LED", False, False), ("Khan", False, False),
-     ("Today", True, True), ("42", False, False), ("um,", False, False)],
+    [
+        ("energy", False, True),
+        ("the", False, False),
+        ("LED", False, False),
+        ("Khan", False, False),
+        ("Today", True, True),
+        ("42", False, False),
+        ("um,", False, False),
+    ],
 )
 def test_checkable(word: str, start: bool, ok: bool) -> None:
     from app.pipeline import language
 
     lex = language.load_lexicon("en")
-    skip = {" ".join(p) for p in lex.fillers_always} | set(lex.fillers_contextual) | set(lex.stopwords)
+    skip = (
+        {" ".join(p) for p in lex.fillers_always} | set(lex.fillers_contextual) | set(lex.stopwords)
+    )
     assert pr.checkable(w(word, 0), language.normalize(word), skip, start) is ok
 
 
 def transcript(words: list[Word]) -> Transcript:
-    return Transcript(language="en", duration_s=10, model="t",
-                      segments=[Segment(id=0, start=0, end=words[-1].end, text="", words=words)])
+    return Transcript(
+        language="en",
+        duration_s=10,
+        model="t",
+        segments=[Segment(id=0, start=0, end=words[-1].end, text="", words=words)],
+    )
 
 
 def test_analyze_flags_mismatch_with_frames() -> None:
     words = [w("Today", 0.0), w("energy", 0.5), w("matters", 1.0)]
-    expected = {"today": ["t", "ə", "d", "eɪ"], "energy": ["ɛ", "n", "ɚ", "dʒ", "i"],
-                "matters": ["m", "æ", "ɾ", "ɚ", "z"]}
+    expected = {
+        "today": ["t", "ə", "d", "eɪ"],
+        "energy": ["ɛ", "n", "ɚ", "dʒ", "i"],
+        "matters": ["m", "æ", "ɾ", "ɚ", "z"],
+    }
     # 20 ms frames: say "today", then garbage instead of "energy", then "matters"
-    frames = (["t"] * 5 + ["ə"] * 5 + ["d"] * 5 + ["eɪ"] * 5 + ["<pad>"] * 5
-              + ["b"] * 5 + ["ʊ"] * 5 + ["k"] * 5 + ["<pad>"] * 5
-              + ["m"] * 5 + ["æ"] * 5 + ["t"] * 5 + ["ə"] * 5 + ["ɹ"] * 5 + ["z"] * 5)
+    frames = (
+        ["t"] * 5
+        + ["ə"] * 5
+        + ["d"] * 5
+        + ["eɪ"] * 5
+        + ["<pad>"] * 5
+        + ["b"] * 5
+        + ["ʊ"] * 5
+        + ["k"] * 5
+        + ["<pad>"] * 5
+        + ["m"] * 5
+        + ["æ"] * 5
+        + ["t"] * 5
+        + ["ə"] * 5
+        + ["ɹ"] * 5
+        + ["z"] * 5
+    )
     m = pr.analyze(transcript(words), frames, expected, {"<pad>"})
     assert m.method == "phonemes" and m.words_checked == 3
     assert [u.word for u in m.unclear_words] == ["energy"]

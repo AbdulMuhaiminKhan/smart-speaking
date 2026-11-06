@@ -59,6 +59,10 @@ def test_job_completes_and_stores_results(
     settings_env: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setattr(transcribe, "run", fake_transcribe)
+    monkeypatch.setenv("SS_LLM_ENABLED", "false")
+    from app.config import get_settings
+
+    get_settings.cache_clear()
     monkeypatch.setattr(body, "run", lambda *a, **k: body.aggregate([], body.SAMPLE_FPS, 6.0))
     monkeypatch.setattr(
         pronunciation,

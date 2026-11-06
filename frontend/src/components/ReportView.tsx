@@ -1,10 +1,13 @@
-import type { Issue, PacingResult, Report } from '../api/client'
+import type { BodyResult, Issue, PacingResult, Report, VoiceResult } from '../api/client'
+import { LineChart, Radar } from './charts'
 import { CATEGORY_LABELS, CATEGORY_ORDER, scoreColor } from '../lib/categories'
 import { formatTime } from '../lib/format'
 
 interface Props {
   report: Report
   pacing: PacingResult | null
+  voice: VoiceResult | null
+  body: BodyResult | null
   onSeek: (t: number) => void
 }
 
@@ -13,53 +16,58 @@ const card = 'rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-
 function ScoreGrid({ report }: { report: Report }) {
   const cats = CATEGORY_ORDER.map((c) => report.scores.categories[c]).filter(Boolean)
   return (
-    <div className={`${card} flex flex-wrap items-center gap-6`}>
-      <div className="pr-6 sm:border-r sm:border-slate-200 dark:sm:border-slate-800">
-        <p className="text-sm text-slate-500">Overall</p>
+    <div className={`${card} grid items-center gap-6 md:grid-cols-[1fr_2fr]`}>
+      {cats.filter((c) => c.score !== null).length >= 3 ? (
+        <Radar items={cats.filter((c) => c.score !== null).map((c) => ({ label: CATEGORY_LABELS[c.category], value: c.score }))} />
+      ) : (
+        <div />
+      )}
+      <div>
+        <p className="text-sm text-slate-500">Overall score</p>
         <p className={`text-5xl font-semibold tabular-nums ${scoreColor(report.overall)}`}>
           {report.overall !== null ? Math.round(report.overall) : '–'}
         </p>
-      </div>
-      <div className="grid flex-1 grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
-        {cats.map((c) => (
-          <div key={c.category} title={c.reason ?? undefined}>
-            <p className="text-xs text-slate-500">{CATEGORY_LABELS[c.category]}</p>
-            <p className={`text-2xl font-semibold tabular-nums ${scoreColor(c.score)}`}>
-              {c.score !== null ? Math.round(c.score) : '–'}
-            </p>
-            {c.status === 'not_scored' && <p className="text-[11px] text-slate-400">Coming soon</p>}
-          </div>
-        ))}
+        {report.summary && <p className="mt-3 text-slate-700 dark:text-slate-300">{report.summary}</p>}
+        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {cats.map((c) => (
+            <div key={c.category} title={c.reason ?? undefined}>
+              <p className="text-xs text-slate-500">{CATEGORY_LABELS[c.category]}</p>
+              <p className={`text-xl font-semibold tabular-nums ${scoreColor(c.score)}`}>
+                {c.score !== null ? Math.round(c.score) : '–'}
+              </p>
+              {c.status === 'not_scored' && <p className="text-[11px] leading-tight text-slate-400">{c.reason}</p>}
+            </div>
+          ))}
+        </div>
+        <p className="mt-4 text-xs text-slate-400">
+          {report.generated_by === 'llm'
+            ? `Coaching written by a local AI (${report.llm_model}) from your measured metrics only.`
+            : report.llm_error
+              ? `${report.llm_error} The coaching below uses built-in templates.`
+              : 'Coaching uses built-in templates.'}
+        </p>
       </div>
     </div>
   )
 }
 
-function WpmChart({ pacing }: { pacing: PacingResult }) {
-  const pts = pacing.wpm_series.filter((p) => p.value !== null) as { t: number; value: number }[]
-  if (pts.length < 2) return null
-  const W = 600
-  const H = 120
-  const maxT = pts[pts.length - 1].t
-  const minT = pts[0].t
-  const maxV = Math.max(200, ...pts.map((p) => p.value))
-  const x = (t: number) => ((t - minT) / (maxT - minT || 1)) * (W - 40) + 30
-  const y = (v: number) => H - 20 - (v / maxV) * (H - 30)
-  const path = pts.map((p, i) => `${i ? 'L' : 'M'}${x(p.t).toFixed(1)} ${y(p.value).toFixed(1)}`).join(' ')
-  return (
-    <div className={card}>
-      <h3 className="mb-2 font-semibold">Pace over time</h3>
-      <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label="Words per minute over time">
-        <rect x={30} y={y(170)} width={W - 40} height={y(110) - y(170)} className="fill-emerald-500/10" />
-        <text x={0} y={y(170) + 4} className="fill-slate-400 text-[10px]">170</text>
-        <text x={0} y={y(110) + 4} className="fill-slate-400 text-[10px]">110</text>
-        <path d={path} fill="none" strokeWidth={2} className="stroke-brand-600" />
-        <text x={30} y={H - 4} className="fill-slate-400 text-[10px]">{formatTime(minT)}</text>
-        <text x={W - 10} y={H - 4} textAnchor="end" className="fill-slate-400 text-[10px]">{formatTime(maxT)}</text>
-      </svg>
-      <p className="text-xs text-slate-500">Green band: comfortable pace (110 to 170 words per minute).</p>
-    </div>
-  )
+function Charts({ pacing, voice, body, onSeek }: { pacing: PacingResult | null; voice: VoiceResult | null; body: BodyResult | null; onSeek: (t: number) => void }) {
+  const charts = [
+    pacing && pacing.wpm_series.length > 1 && (
+      <LineChart key="wpm" title="Pace over time" points={pacing.wpm_series} unit="Words per minute" band={[110, 170]} bandLabel="comfortable pace" yMin={0} onSeek={onSeek} />
+    ),
+    voice && (
+      <LineChart key="pitch" title="Pitch over time" points={voice.pitch_series} unit="Pitch in Hz (more movement sounds more expressive)" onSeek={onSeek} />
+    ),
+    voice && (
+      <LineChart key="volume" title="Volume over time" points={voice.volume_series} unit="Loudness in dB" onSeek={onSeek} />
+    ),
+    body && body.eye_contact_ratio !== null && (
+      <LineChart key="eye" title="Eye contact over time" points={body.eye_contact_series.map((p) => ({ t: p.t, value: p.value === null ? null : p.value * 100 }))} unit="Percent of time looking at the camera (estimate)" band={[75, 100]} bandLabel="good eye contact" yMin={0} yMax={100} format={(v) => `${v.toFixed(0)}%`} onSeek={onSeek} />
+    ),
+  ].filter(Boolean)
+  if (!charts.length) return null
+  return <div className={`${card} grid gap-6 md:grid-cols-2`}>{charts}</div>
 }
 
 const severityDot: Record<Issue['severity'], string> = {
@@ -96,7 +104,7 @@ function Timeline({ issues, onSeek }: { issues: Issue[]; onSeek: (t: number) => 
   )
 }
 
-export function ReportView({ report, pacing, onSeek }: Props) {
+export function ReportView({ report, pacing, voice, body, onSeek }: Props) {
   return (
     <div className="space-y-6">
       <ScoreGrid report={report} />
@@ -136,7 +144,7 @@ export function ReportView({ report, pacing, onSeek }: Props) {
         </div>
       )}
 
-      {pacing && <WpmChart pacing={pacing} />}
+      <Charts pacing={pacing} voice={voice} body={body} onSeek={onSeek} />
       <Timeline issues={report.issues} onSeek={onSeek} />
 
       <div className="grid gap-6 md:grid-cols-3">
@@ -179,6 +187,27 @@ export function ReportView({ report, pacing, onSeek }: Props) {
             </div>
           ))}
       </div>
+
+      {report.clarity && (
+        <div className={card}>
+          <h3 className="mb-2 font-semibold">Sentence clarity</h3>
+          <p className="text-sm text-slate-700 dark:text-slate-300">{report.clarity.feedback}</p>
+          {report.clarity.examples.length > 0 && (
+            <ul className="mt-3 space-y-3 text-sm">
+              {report.clarity.examples.map((e) => (
+                <li key={e.original} className="rounded-md bg-slate-50 p-3 dark:bg-slate-800">
+                  <p className="text-slate-500">
+                    <span className="font-medium">You said:</span> “{e.original}”
+                  </p>
+                  <p className="mt-1">
+                    <span className="font-medium">Try:</span> “{e.suggestion}”
+                  </p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
     </div>
   )
 }

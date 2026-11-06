@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>SmartSpeaking report: {{ title }}</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm; @bottom-right { content: "Page " counter(page) " of " counter(pages); font-size: 8pt; color: #94a3b8; } }
+  body { font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; color: #0f172a; font-size: 10pt; line-height: 1.45; }
+  h1 { font-size: 20pt; margin: 0; }
+  h2 { font-size: 12.5pt; margin: 18pt 0 6pt; border-bottom: 1px solid #e2e8f0; padding-bottom: 3pt; }
+  h3 { font-size: 10.5pt; margin: 10pt 0 3pt; }
+  .muted { color: #64748b; }
+  .small { font-size: 8.5pt; }
+  .top { display: flex; gap: 16pt; align-items: center; }
+  .overall { font-size: 40pt; font-weight: bold; line-height: 1; }
+  .good { color: #047857; } .ok { color: #b45309; } .bad { color: #b91c1c; }
+  table { width: 100%; border-collapse: collapse; }
+  td, th { text-align: left; padding: 3pt 4pt; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
+  th { color: #64748b; font-weight: normal; font-size: 8.5pt; }
+  .cols { display: flex; gap: 14pt; } .cols > div { flex: 1; }
+  ol, ul { margin: 3pt 0; padding-left: 14pt; }
+  .fix { margin-bottom: 6pt; }
+  .section { page-break-inside: avoid; margin-bottom: 8pt; }
+  .chart { page-break-inside: avoid; margin: 4pt 0 10pt; }
+  .quote { background: #f8fafc; padding: 5pt 7pt; margin: 4pt 0; }
+  .issue td:first-child { font-family: Menlo, monospace; color: #64748b; width: 34pt; }
+</style>
+</head>
+<body>
+  <h1>{{ title }}</h1>
+  <p class="muted">{{ created }} · {{ duration }} · SmartSpeaking practice report</p>
+
+  <div class="top">
+    <div>{{ radar | safe }}</div>
+    <div>
+      <div class="muted small">Overall score</div>
+      <div class="overall {{ overall_class }}">{{ overall }}</div>
+      {% if summary %}<p>{{ summary }}</p>{% endif %}
+      <p class="muted small">{{ coach_note }}</p>
+    </div>
+  </div>
+
+  <div class="cols">
+    <div>
+      <h2>What you did well</h2>
+      <ul>{% for s in strengths %}<li>{{ s }}</li>{% else %}<li>Keep practicing to build strengths.</li>{% endfor %}</ul>
+    </div>
+    <div>
+      <h2>Biggest gaps</h2>
+      <ul>{% for g in gaps %}<li>{{ g.message }}</li>{% else %}<li>No major gaps.</li>{% endfor %}</ul>
+    </div>
+  </div>
+
+  {% if fixes %}
+  <h2>Your top {{ fixes | length }} fixes for next time</h2>
+  <ol>
+    {% for f in fixes %}
+    <li class="fix"><strong>{{ f.title }}.</strong> {{ f.how }}<br><span class="muted">Drill: {{ f.drill }}</span></li>
+    {% endfor %}
+  </ol>
+  {% endif %}
+
+  <h2>By category</h2>
+  {% for s in sections %}
+  <div class="section">
+    <h3>{{ s.label }} {% if s.score is not none %}<span class="{{ s.cls }}">· {{ s.score }}</span>{% else %}<span class="muted">· not scored</span>{% endif %}</h3>
+    {% if s.note %}<div class="muted small">{{ s.note }}</div>{% endif %}
+    <ul>{% for w in s.what_happened %}<li>{{ w }}</li>{% endfor %}</ul>
+    {% if s.why_it_matters %}<div class="muted">{{ s.why_it_matters }}</div>{% endif %}
+    {% for h in s.how_to_fix %}<div>→ {{ h }}</div>{% endfor %}
+    {% if s.drill %}<div class="quote"><strong>Practice drill:</strong> {{ s.drill }}</div>{% endif %}
+  </div>
+  {% endfor %}
+
+  {% if clarity %}
+  <h2>Sentence clarity</h2>
+  <p>{{ clarity.feedback }}</p>
+  {% for e in clarity.examples %}
+  <div class="quote"><span class="muted">You said:</span> “{{ e.original }}”<br><strong>Try:</strong> “{{ e.suggestion }}”</div>
+  {% endfor %}
+  {% endif %}
+
+  {% if charts %}
+  <h2>Over time</h2>
+  {% for c in charts %}
+  <div class="chart"><h3>{{ c.title }}</h3>{{ c.svg | safe }}<div class="muted small">{{ c.caption }}</div></div>
+  {% endfor %}
+  {% endif %}
+
+  <h2>Mistakes timeline</h2>
+  {% if issues %}
+  <table>
+    {% for i in issues %}<tr class="issue"><td>{{ i.time }}</td><td>{{ i.message }}</td><td class="muted">{{ i.category }}</td></tr>{% endfor %}
+  </table>
+  {% else %}<p>No issues found.</p>{% endif %}
+
+  <h2>Transcript</h2>
+  <p>{{ transcript }}</p>
+
+  <p class="muted small">Scores come from the transparent rules in docs/scoring.md. Pronunciation and camera-based
+  scores are estimates. This report was created on your own computer; nothing was sent to a cloud service.</p>
+</body>
+</html>

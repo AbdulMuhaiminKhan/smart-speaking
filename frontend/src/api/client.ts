@@ -175,6 +175,10 @@ export interface Issue {
 
 export interface Report {
   generated_by: 'template' | 'llm'
+  llm_model: string | null
+  llm_error: string | null
+  summary: string | null
+  clarity: { feedback: string; examples: { original: string; suggestion: string }[] } | null
   overall: number | null
   scores: { overall: number | null; categories: Record<Category, CategoryScore> }
   strengths: string[]
@@ -204,7 +208,24 @@ export interface PacingResult {
   pauses: { start: number; end: number; duration: number; kind: 'effective' | 'awkward' | 'hesitation' }[]
 }
 
+export interface VoiceResult {
+  pitch_series: TimePoint[]
+  volume_series: TimePoint[]
+  tone: string
+  tone_reasons: string[]
+}
+
+export interface BodyResult {
+  eye_contact_series: TimePoint[]
+  eye_contact_ratio: number | null
+}
+
+const optional = <T,>(p: Promise<T>): Promise<T | null> => p.catch(() => null)
+
 export const reportApi = {
   getReport: (id: string) => request<Report>(`/api/sessions/${id}/results/report`),
   getPacing: (id: string) => request<PacingResult>(`/api/sessions/${id}/results/pacing`),
+  getVoice: (id: string) => optional(request<VoiceResult>(`/api/sessions/${id}/results/voice`)),
+  getBody: (id: string) => optional(request<BodyResult>(`/api/sessions/${id}/results/body`)),
+  pdfUrl: (id: string) => `/api/sessions/${id}/report.pdf`,
 }

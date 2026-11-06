@@ -25,6 +25,7 @@ from app.pipeline import (
     preprocess,
     pronunciation,
     report,
+    report_llm,
     scoring,
     transcribe,
     voice,
@@ -51,8 +52,9 @@ STAGES = {
     "language": Stage("language", 0.55, 0.57),
     "voice": Stage("voice", 0.57, 0.62),
     "pronunciation": Stage("pronunciation", 0.62, 0.72),
-    "body": Stage("body", 0.72, 0.97),
-    "report": Stage("report", 0.97, 1.0),
+    "body": Stage("body", 0.72, 0.85),
+    "report": Stage("report", 0.85, 0.86),
+    "coaching": Stage("coaching", 0.86, 1.0),
 }
 
 
@@ -211,7 +213,14 @@ def analyze_session(session_id: str) -> None:
                 body=body_m,
                 pronunciation=pron_m,
             )
-            save_result(db, sid, "report", rep.model_dump())
+            save_result(db, sid, "report", rep.model_dump())  # template version first
+
+            if settings.llm_enabled:
+                progress.stage("coaching")
+                rep = report_llm.run(
+                    rep, transcript.text, url=settings.ollama_url, model=settings.ollama_model
+                )
+                save_result(db, sid, "report", rep.model_dump())
 
             ps.status = SessionStatus.completed
             ps.stage = None

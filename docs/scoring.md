@@ -224,3 +224,30 @@ only very low Whisper confidence (under 0.3) is used to flag words.
   it to keep them, but some may still be dropped, so counts can be slightly low.
 - Rates on very short clips (under 30 s) swing a lot. One filler in 10 seconds
   is 6 per minute.
+
+## AI-written coaching
+
+Scores never come from the AI. After scoring, a local LLM (Ollama, default
+`qwen2.5:7b`, set with `SS_OLLAMA_MODEL`) rewrites the coaching text in a more
+personal voice and adds sentence-clarity feedback from the transcript.
+
+What it receives: a list of numbered facts built from the scored rules (each
+problem with its advice and drill, each passed rule as a strength), the
+category scores with a label (strength, okay, needs work), counts of timeline
+issues, and the transcript text. It never receives audio or video.
+
+What is checked before anything is shown:
+
+- Every strength, gap, fix and section must cite fact ids that exist. Strengths
+  must cite passed rules, gaps and fixes must cite problems, and a category's
+  section may only cite that category's facts.
+- Every number in the text must appear in the cited facts (1, 2 and 3 are
+  allowed as plain counts). An invented statistic drops the item.
+- Clarity examples must quote the transcript word for word.
+- Gaps and fixes stay in score order (biggest penalty first); the AI only
+  rewords them.
+
+Anything that fails a check is replaced by the template text, and the report
+records how many items were dropped. If Ollama is not running, the whole
+report uses the templates and says so. Set `SS_LLM_ENABLED=false` to always
+use the templates.

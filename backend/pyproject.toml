@@ -22,6 +22,8 @@ dependencies = [
     "torch>=2.15.0",
     "transformers>=5.22.2",
     "phonemizer>=3.6.0",
+    "weasyprint>=70.0",
+    "jinja2>=3.1.6",
 ]
 
 [dependency-groups]
@@ -57,4 +59,7 @@ plugins = ["pydantic.mypy"]
 [tool.ruff.lint.per-file-ignores]
 # Coaching copy and test fixtures read better as one line each.
 "app/pipeline/report.py" = ["E501"]
+# SVG and HTML markup strings.
+"app/services/charts.py" = ["E501"]
+"app/services/pdf.py" = ["E501"]
 "tests/**" = ["E501"]

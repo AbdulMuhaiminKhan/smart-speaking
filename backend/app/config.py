@@ -36,6 +36,7 @@ class Settings(BaseSettings):
 
     ollama_url: str = "http://localhost:11434"
     ollama_model: str = "qwen2.5:7b"
+    llm_enabled: bool = True
 
     job_timeout_s: int = 60 * 60
 

@@ -6,7 +6,7 @@ import uuid
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -152,6 +152,37 @@ def get_result(session_id: uuid.UUID, step: str, db: DbDep, user: UserDep) -> di
 def get_media(session_id: uuid.UUID, db: DbDep, user: UserDep) -> FileResponse:
     ps = get_owned_session(session_id, db, user)
     return FileResponse(ps.media_path, filename=ps.original_filename)
+
+
+@router.get("/{session_id}/report.pdf")
+def get_report_pdf(session_id: uuid.UUID, db: DbDep, user: UserDep) -> Response:
+    from app.pipeline.report import Report
+    from app.schemas.transcript import Transcript
+    from app.services import pdf
+
+    ps = get_owned_session(session_id, db, user)
+    results = {r.step: r.data for r in ps.results}
+    if "report" not in results:
+        raise error(404, "not_ready", "The report is not ready yet.")
+    transcript = (
+        Transcript.model_validate(results["transcript"]) if "transcript" in results else None
+    )
+    html = pdf.render_html(
+        Report.model_validate(results["report"]),
+        title=ps.title,
+        created=ps.created_at.strftime("%d %b %Y, %H:%M"),
+        duration_s=ps.duration_s,
+        transcript_text=transcript.text if transcript else "",
+        pacing=results.get("pacing"),
+        voice=results.get("voice"),
+        body=results.get("body"),
+    )
+    safe = "".join(c if c.isalnum() or c in " -_" else "_" for c in ps.title).strip() or "report"
+    return Response(
+        content=pdf.render_pdf(html),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="SmartSpeaking - {safe}.pdf"'},
+    )
 
 
 @router.post("/{session_id}/retry", response_model=SessionOut)

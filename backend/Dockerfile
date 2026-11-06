@@ -22,7 +22,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PATH="/app/.venv/bin:$PATH"
 
 RUN apt-get update \
- && apt-get install -y --no-install-recommends ffmpeg espeak-ng curl libgl1 libglib2.0-0 libegl1 libgles2 \
+ && apt-get install -y --no-install-recommends ffmpeg espeak-ng curl libgl1 libglib2.0-0 libegl1 libgles2 libpango-1.0-0 libpangoft2-1.0-0 libharfbuzz-subset0 fonts-dejavu-core \
  && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
