@@ -20,6 +20,9 @@ export function Layout() {
             <NavLink to="/" end className={link}>
               Upload
             </NavLink>
+            <NavLink to="/live" className={link}>
+              Live
+            </NavLink>
             <NavLink to="/sessions" className={link}>
               Sessions
             </NavLink>

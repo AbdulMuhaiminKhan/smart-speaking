@@ -1,9 +1,18 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { api, ApiError, type PracticeSession, type Transcript } from '../api/client'
+import {
+  api,
+  ApiError,
+  reportApi,
+  type PacingResult,
+  type PracticeSession,
+  type Report,
+  type Transcript,
+} from '../api/client'
 import { ProgressBar } from '../components/ProgressBar'
 import { StatusBadge } from '../components/StatusBadge'
-import { TranscriptView } from '../components/TranscriptView'
+import { ReportView } from '../components/ReportView'
+import { TranscriptLegend, TranscriptView } from '../components/TranscriptView'
 import { formatTime, STAGE_LABELS } from '../lib/format'
 
 const POLL_MS = 1000
@@ -14,6 +23,8 @@ export function SessionPage() {
   const videoRef = useRef<HTMLVideoElement>(null)
   const [session, setSession] = useState<PracticeSession | null>(null)
   const [transcript, setTranscript] = useState<Transcript | null>(null)
+  const [report, setReport] = useState<Report | null>(null)
+  const [pacing, setPacing] = useState<PacingResult | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [currentTime, setCurrentTime] = useState(0)
 
@@ -50,12 +61,15 @@ export function SessionPage() {
   useEffect(() => {
     if (session?.status === 'completed' && !transcript) {
       api.getTranscript(id).then(setTranscript).catch(() => setTranscript(null))
+      reportApi.getReport(id).then(setReport).catch(() => setReport(null))
+      reportApi.getPacing(id).then(setPacing).catch(() => setPacing(null))
     }
   }, [session?.status, id, transcript])
 
   const seek = (t: number) => {
     const v = videoRef.current
     if (!v) return
+    v.scrollIntoView({ behavior: 'smooth', block: 'center' })
     v.currentTime = t
     void v.play()
   }
@@ -167,6 +181,8 @@ export function SessionPage() {
         </ul>
       )}
 
+      {report && <ReportView report={report} pacing={pacing} onSeek={seek} />}
+
       <div className="grid gap-6 lg:grid-cols-2">
         <video
           ref={videoRef}
@@ -180,11 +196,16 @@ export function SessionPage() {
           <h2 className="mb-1 font-semibold">Transcript</h2>
           {transcript ? (
             <>
-              <p className="mb-4 text-xs text-slate-500">
-                Click any word to jump there. Dotted words were hard to hear.
-              </p>
+              <p className="mb-2 text-xs text-slate-500">Click any word to jump there.</p>
+              <TranscriptLegend />
               <div className="max-h-[28rem] overflow-y-auto pr-2">
-                <TranscriptView transcript={transcript} currentTime={currentTime} onSeek={seek} />
+                <TranscriptView
+                  transcript={transcript}
+                  currentTime={currentTime}
+                  onSeek={seek}
+                  issues={report?.issues}
+                  pauses={pacing?.pauses}
+                />
               </div>
             </>
           ) : (

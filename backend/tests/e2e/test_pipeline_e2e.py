@@ -37,3 +37,10 @@ def test_upload_to_transcript(
     words = [w["text"].lower().strip(",.") for s in transcript["segments"] for w in s["words"]]
     assert "public" in words and "speaking" in words
     assert all(w["end"] >= w["start"] for s in transcript["segments"] for w in s["words"])
+
+    report = client.get(f"/api/sessions/{sid}/results/report").json()
+    assert report["overall"] is not None
+    assert report["scores"]["categories"]["language"]["status"] == "scored"
+    assert report["scores"]["categories"]["eye_contact"]["status"] == "not_scored"
+    fillers = {i["text"] for i in report["issues"] if i["kind"] == "filler"}
+    assert {"um", "uh"} & {f.lower() for f in fillers} or "umm" in fillers

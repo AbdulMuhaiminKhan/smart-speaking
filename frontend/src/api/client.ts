@@ -133,3 +133,78 @@ export function uploadSession(opts: UploadOptions): Promise<PracticeSession> {
     xhr.send(form)
   })
 }
+
+// ---- Report (Phase 2) ----
+
+export type Category =
+  | 'voice'
+  | 'pacing'
+  | 'language'
+  | 'pronunciation'
+  | 'eye_contact'
+  | 'posture'
+  | 'body_language'
+
+export interface RuleResult {
+  id: string
+  metric: string
+  value: number
+  penalty: number
+  max_penalty: number
+  message: string
+}
+
+export interface CategoryScore {
+  category: Category
+  status: 'scored' | 'not_scored'
+  score: number | null
+  reason: string | null
+  rules: RuleResult[]
+}
+
+export interface Issue {
+  id: string
+  category: Category
+  kind: string
+  start: number
+  end: number
+  severity: 'info' | 'minor' | 'major'
+  message: string
+  text: string | null
+}
+
+export interface Report {
+  generated_by: 'template' | 'llm'
+  overall: number | null
+  scores: { overall: number | null; categories: Record<Category, CategoryScore> }
+  strengths: string[]
+  gaps: { category: Category; rule_id: string; title: string; message: string; penalty: number }[]
+  top_fixes: { title: string; how: string; drill: string }[]
+  sections: {
+    category: Category
+    score: number | null
+    status: 'scored' | 'not_scored'
+    what_happened: string[]
+    why_it_matters: string
+    how_to_fix: string[]
+    drill: string | null
+  }[]
+  issues: Issue[]
+  highlights: Record<string, string | number | null>
+}
+
+export interface TimePoint {
+  t: number
+  value: number | null
+}
+
+export interface PacingResult {
+  wpm_overall: number
+  wpm_series: TimePoint[]
+  pauses: { start: number; end: number; duration: number; kind: 'effective' | 'awkward' | 'hesitation' }[]
+}
+
+export const reportApi = {
+  getReport: (id: string) => request<Report>(`/api/sessions/${id}/results/report`),
+  getPacing: (id: string) => request<PacingResult>(`/api/sessions/${id}/results/pacing`),
+}

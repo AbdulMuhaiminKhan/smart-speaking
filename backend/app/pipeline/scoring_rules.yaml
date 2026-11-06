@@ -1,0 +1,136 @@
+# Transparent scoring rules. Every category starts at 100 and loses points per rule.
+#
+# A rule with `above` starts taking points once the metric goes above that value,
+# and takes `max_penalty` points once it reaches `full`. A rule with `below` works
+# the same way downwards. In between, the penalty grows in a straight line.
+# docs/scoring.md explains each rule and why the thresholds were chosen.
+
+weights:
+  voice: 1.0
+  pacing: 1.0
+  language: 1.0
+  pronunciation: 1.0
+  eye_contact: 1.0
+  posture: 0.75
+  body_language: 0.75
+
+categories:
+  pacing:
+    - id: too_fast
+      metric: wpm_overall
+      above: 165
+      full: 200
+      max_penalty: 30
+      message: "Overall pace of {value:.0f} words per minute is fast (aim for 130 to 160)."
+    - id: too_slow
+      metric: wpm_overall
+      below: 115
+      full: 80
+      max_penalty: 25
+      message: "Overall pace of {value:.0f} words per minute is slow (aim for 130 to 160)."
+    - id: fast_stretches
+      metric: fast_ratio
+      above: 0.2
+      full: 0.6
+      max_penalty: 15
+      message: "{value:.0%} of the talk was faster than 170 words per minute."
+    - id: uneven_pace
+      metric: wpm_variability
+      above: 0.3
+      full: 0.6
+      max_penalty: 10
+      message: "Your pace changed a lot during the talk (variation {value:.0%})."
+    - id: awkward_pauses
+      metric: awkward_pauses_per_min
+      above: 0.5
+      full: 3
+      max_penalty: 20
+      message: "{value:.1f} long silences (over 2.5 s) per minute."
+    - id: hesitations
+      metric: hesitations_per_min
+      above: 2
+      full: 8
+      max_penalty: 15
+      message: "{value:.1f} mid-sentence hesitations per minute."
+    - id: too_few_pauses
+      metric: effective_pauses_per_min
+      below: 3
+      full: 0.5
+      max_penalty: 10
+      message: "Only {value:.1f} pauses at sentence breaks per minute."
+    - id: off_target_time
+      metric: target_time_error
+      above: 0.1
+      full: 0.5
+      max_penalty: 20
+      message: "Your timed pitch was {value:.0%} away from the target length."
+
+  voice:
+    - id: monotone
+      metric: pitch_std_semitones
+      below: 2.5
+      full: 1.2
+      max_penalty: 35
+      message: "Pitch varied by only {value:.1f} semitones, which sounds monotone."
+    - id: narrow_range
+      metric: pitch_range_semitones
+      below: 6
+      full: 3
+      max_penalty: 10
+      message: "Your pitch range was {value:.1f} semitones (expressive speech is often 6 or more)."
+    - id: quiet_stretches
+      metric: quiet_ratio
+      above: 0.1
+      full: 0.4
+      max_penalty: 20
+      message: "{value:.0%} of your speaking time was much quieter than the rest."
+    - id: volume_swings
+      metric: intensity_std_db
+      above: 6
+      full: 10
+      max_penalty: 10
+      message: "Your volume swung a lot from second to second (spread of {value:.1f} dB)."
+    - id: trailing_off
+      metric: energy_trend_db_per_min
+      below: -2
+      full: -8
+      max_penalty: 10
+      message: "Your volume faded as the talk went on ({value:+.1f} dB per minute)."
+
+  language:
+    - id: fillers
+      metric: fillers_per_min
+      above: 2
+      full: 10
+      max_penalty: 40
+      message: "{value:.1f} filler words per minute."
+    - id: hedging
+      metric: hedges_per_min
+      above: 1.5
+      full: 6
+      max_penalty: 15
+      message: "{value:.1f} hedging phrases per minute (like \"I think\" or \"sort of\")."
+    - id: repetitions
+      metric: repetitions_per_min
+      above: 1
+      full: 4
+      max_penalty: 10
+      message: "{value:.1f} repeated words per minute (like \"the the\")."
+    - id: low_variety
+      metric: vocabulary_mattr
+      below: 0.6
+      full: 0.45
+      max_penalty: 15
+      message: "Vocabulary variety of {value:.2f} is low (0.6 or more is typical)."
+    - id: long_sentences
+      metric: long_sentence_share
+      above: 0.15
+      full: 0.5
+      max_penalty: 10
+      message: "{value:.0%} of your sentences ran over 30 words."
+    - id: off_script
+      metric: script_coverage
+      below: 0.9
+      full: 0.5
+      max_penalty: 25
+      message: "You covered {value:.0%} of your script."

@@ -15,6 +15,9 @@ dependencies = [
     "redis>=5.0",
     "rq>=1.16",
     "faster-whisper>=1.1",
+    "praat-parselmouth>=0.4.7",
+    "pyyaml>=6.0.3",
+    "numpy>=2.4.6",
 ]
 
 [dependency-groups]
@@ -24,6 +27,7 @@ dev = [
     "fakeredis>=2.23",
     "ruff>=0.5",
     "mypy>=1.10",
+    "types-pyyaml>=6.0.12.20261103",
 ]
 
 [tool.pytest.ini_options]
@@ -45,3 +49,8 @@ python_version = "3.11"
 strict = true
 ignore_missing_imports = true
 plugins = ["pydantic.mypy"]
+
+[tool.ruff.lint.per-file-ignores]
+# Coaching copy and test fixtures read better as one line each.
+"app/pipeline/report.py" = ["E501"]
+"tests/**" = ["E501"]

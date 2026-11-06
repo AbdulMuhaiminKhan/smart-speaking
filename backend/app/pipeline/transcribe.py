@@ -60,12 +60,16 @@ def load_model(size: str, models_dir: str, device_pref: str = "auto") -> Any:
     from faster_whisper import WhisperModel
 
     device, compute_type = detect_device(device_pref)
-    return WhisperModel(
-        size,
-        device=device,
-        compute_type=compute_type,
-        download_root=str(Path(models_dir) / "whisper"),
-    )
+    kwargs = {
+        "device": device,
+        "compute_type": compute_type,
+        "download_root": str(Path(models_dir) / "whisper"),
+    }
+    try:
+        # Use the cached copy without contacting Hugging Face; download only once.
+        return WhisperModel(size, local_files_only=True, **kwargs)
+    except Exception:
+        return WhisperModel(size, **kwargs)
 
 
 def load_wav(path: Path) -> Any:

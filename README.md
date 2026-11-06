@@ -5,7 +5,7 @@ your voice, pacing, filler words, language, pronunciation, eye contact, posture 
 body language. Everything runs on your own machine with open-source models. Nothing
 is sent to any cloud service.
 
-> Status: Phase 1 of 6 (upload, transcription). See the build plan for what comes next.
+> Status: Phase 2 of 6 (upload and live recording, transcription, voice, pacing and language analysis, basic report). Scoring rules: [docs/scoring.md](docs/scoring.md).
 
 ## Quick start (Docker)
 

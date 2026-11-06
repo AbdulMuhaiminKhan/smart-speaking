@@ -13,4 +13,7 @@ export function formatBytes(bytes: number): string {
 export const STAGE_LABELS: Record<string, string> = {
   preprocess: 'Reading the video and extracting audio',
   transcribe: 'Transcribing your speech',
+  language: 'Checking pace, pauses and word choice',
+  voice: 'Analyzing pitch, volume and tone',
+  report: 'Scoring and writing your report',
 }

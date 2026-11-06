@@ -69,7 +69,7 @@ def test_job_completes_and_stores_results(
     assert ps.progress == 1.0
     assert ps.duration_s == pytest.approx(6.0, abs=0.2)
     steps = {r.step for r in db.query(AnalysisResult).filter_by(session_id=ps.id)}
-    assert steps == {"media", "transcript"}
+    assert steps == {"media", "transcript", "pacing", "language", "voice", "report"}
 
 
 @requires_ffmpeg

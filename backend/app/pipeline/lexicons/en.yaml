@@ -1,0 +1,182 @@
+# English lexicon for the language step. One file per language (en.yaml, es.yaml, ...).
+# Phrases are lowercase and matched on whole words, longest first.
+
+fillers:
+  # Always counted as fillers.
+  always:
+    - um
+    - umm
+    - uh
+    - uhh
+    - uhm
+    - erm
+    - er
+    - ah
+    - hmm
+    - mm
+    - you know
+    - i mean
+    - basically
+    - actually
+    - literally
+  # Counted only in filler position (see language.py for the rules).
+  contextual:
+    - like
+    - so
+    - well
+
+# "like" is not a filler right after these words ("I would like", "looks like").
+like_not_filler_after:
+  - would
+  - i'd
+  - you'd
+  - we'd
+  - feel
+  - feels
+  - felt
+  - look
+  - looks
+  - looked
+  - seem
+  - seems
+  - seemed
+  - sound
+  - sounds
+  - sounded
+  - just
+  - things
+  - something
+  - anything
+  - nothing
+  - more
+  - not
+  - don't
+  - didn't
+  - doesn't
+  - i
+  - you
+  - we
+  - they
+
+# "I was like", "she's like": quotative like, always a filler-style habit.
+like_quotative_after:
+  - was
+  - were
+  - is
+  - i'm
+  - he's
+  - she's
+  - they're
+  - it's
+  - we're
+  - you're
+
+hedges:
+  - i think maybe
+  - i'm not sure
+  - i feel like
+  - a little bit
+  - i guess
+  - i suppose
+  - i think
+  - sort of
+  - kind of
+  - maybe
+  - probably
+  - perhaps
+  - hopefully
+  - somewhat
+
+stopwords:
+  - a
+  - an
+  - the
+  - and
+  - or
+  - but
+  - if
+  - of
+  - to
+  - in
+  - on
+  - at
+  - for
+  - with
+  - from
+  - by
+  - as
+  - is
+  - are
+  - was
+  - were
+  - be
+  - been
+  - being
+  - am
+  - it
+  - its
+  - it's
+  - this
+  - that
+  - these
+  - those
+  - there
+  - here
+  - i
+  - you
+  - he
+  - she
+  - we
+  - they
+  - me
+  - him
+  - her
+  - us
+  - them
+  - my
+  - your
+  - our
+  - their
+  - his
+  - what
+  - which
+  - who
+  - when
+  - where
+  - how
+  - why
+  - not
+  - no
+  - yes
+  - do
+  - does
+  - did
+  - have
+  - has
+  - had
+  - will
+  - would
+  - can
+  - could
+  - should
+  - just
+  - very
+  - really
+  - all
+  - about
+  - into
+  - out
+  - up
+  - down
+  - then
+  - than
+  - also
+  - because
+  - i'm
+  - we're
+  - you're
+  - they're
+  - don't
+  - let's
+  - get
+  - got

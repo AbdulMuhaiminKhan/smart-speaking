@@ -5,7 +5,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.api import health, sessions
+from app.api import health, live, sessions
 from app.config import get_settings
 
 
@@ -43,6 +43,7 @@ def create_app() -> FastAPI:
 
     app.include_router(health.router)
     app.include_router(sessions.router)
+    app.include_router(live.router)
     return app
 
 
