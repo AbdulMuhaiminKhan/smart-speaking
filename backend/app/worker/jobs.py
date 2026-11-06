@@ -1,0 +1,142 @@
+"""The analysis job. Runs each pipeline step in order and records progress.
+
+Steps run one at a time so only one large model is in memory at once.
+"""
+
+from __future__ import annotations
+
+import logging
+import time
+import uuid
+from dataclasses import dataclass
+from datetime import UTC, datetime
+from pathlib import Path
+from typing import Any
+
+from sqlalchemy.orm import Session
+
+from app.config import MODEL_PRESETS, get_settings
+from app.db.models import AnalysisResult, PracticeSession, SessionStatus
+from app.db.session import get_sessionmaker
+from app.pipeline import preprocess, transcribe
+from app.pipeline.errors import PipelineError
+from app.services.storage import session_dir
+
+log = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True)
+class Stage:
+    name: str
+    start: float  # overall progress when the stage begins, 0..1
+    end: float
+
+
+# Later phases add stages here (voice, language, pronunciation, body, scoring, report).
+STAGES = {
+    "preprocess": Stage("preprocess", 0.0, 0.08),
+    "transcribe": Stage("transcribe", 0.08, 1.0),
+}
+
+
+class ProgressReporter:
+    """Writes progress to the DB, at most every 0.5 s, so the UI can show a bar."""
+
+    def __init__(self, db: Session, ps: PracticeSession, min_interval_s: float = 0.5) -> None:
+        self.db = db
+        self.ps = ps
+        self.min_interval_s = min_interval_s
+        self._last = 0.0
+
+    def stage(self, name: str) -> None:
+        self.ps.stage = name
+        self.ps.progress = STAGES[name].start
+        self.db.commit()
+        self._last = time.monotonic()
+
+    def update(self, name: str, fraction: float) -> None:
+        st = STAGES[name]
+        value = st.start + (st.end - st.start) * max(0.0, min(1.0, fraction))
+        now = time.monotonic()
+        if now - self._last >= self.min_interval_s and value > self.ps.progress:
+            self.ps.progress = round(value, 4)
+            self.db.commit()
+            self._last = now
+
+
+def save_result(db: Session, session_id: uuid.UUID, step: str, data: dict[str, Any]) -> None:
+    existing = db.get(AnalysisResult, (session_id, step))
+    if existing is None:
+        db.add(AnalysisResult(session_id=session_id, step=step, data=data))
+    else:
+        existing.data = data
+    db.commit()
+
+
+def analyze_session(session_id: str) -> None:
+    settings = get_settings()
+    sid = uuid.UUID(session_id)
+    db = get_sessionmaker()()
+    try:
+        ps = db.get(PracticeSession, sid)
+        if ps is None:
+            log.warning("session %s was deleted before analysis started", session_id)
+            return
+
+        ps.status = SessionStatus.processing
+        ps.error_code = None
+        ps.error_message = None
+        db.commit()
+        progress = ProgressReporter(db, ps)
+        work = session_dir(settings.media_dir, sid)
+
+        try:
+            progress.stage("preprocess")
+            info, audio_path, warnings = preprocess.run(
+                Path(ps.media_path), work, settings.min_duration_s, settings.max_duration_s
+            )
+            ps.duration_s = info.duration_s
+            ps.warnings = warnings
+            save_result(db, sid, "media", info.model_dump())
+
+            progress.stage("transcribe")
+            model_size = MODEL_PRESETS.get(ps.model_preset, MODEL_PRESETS["balanced"])
+            transcript = transcribe.run(
+                audio_path,
+                model_size=model_size,
+                models_dir=settings.models_dir,
+                language=ps.language or None,
+                device_pref=settings.whisper_device,
+                on_progress=lambda f: progress.update("transcribe", f),
+            )
+            save_result(db, sid, "transcript", transcript.model_dump())
+
+            ps.status = SessionStatus.completed
+            ps.stage = None
+            ps.progress = 1.0
+            ps.completed_at = datetime.now(UTC)
+            db.commit()
+        except PipelineError as exc:
+            db.rollback()
+            _fail(db, sid, exc.code, exc.message)
+        except Exception:
+            log.exception("analysis failed for session %s", session_id)
+            db.rollback()
+            _fail(
+                db,
+                sid,
+                "internal_error",
+                "Something went wrong while analyzing this recording. Please try again.",
+            )
+    finally:
+        db.close()
+
+
+def _fail(db: Session, sid: uuid.UUID, code: str, message: str) -> None:
+    ps = db.get(PracticeSession, sid)
+    if ps is None:
+        return
+    ps.status = SessionStatus.failed
+    ps.error_code = code
+    ps.error_message = message
+    db.commit()

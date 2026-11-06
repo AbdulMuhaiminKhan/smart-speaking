@@ -1,0 +1,89 @@
+# SmartSpeaking: everything runs locally.
+#   docker compose up --build          -> app at http://localhost:8080
+#   docker compose --profile ollama up -> also run Ollama in Docker (Linux servers;
+#                                         on a Mac, run Ollama natively for GPU speed)
+
+x-backend: &backend
+  build: ./backend
+  env_file: .env
+  environment:
+    SS_DATABASE_URL: postgresql+psycopg://smartspeaking:smartspeaking@postgres:5432/smartspeaking
+    SS_REDIS_URL: redis://redis:6379/0
+    SS_OLLAMA_URL: ${SS_OLLAMA_URL:-http://host.docker.internal:11434}
+  volumes:
+    - media:/data/media
+    - models:/data/models
+  extra_hosts:
+    - "host.docker.internal:host-gateway"
+  depends_on:
+    postgres:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+  restart: unless-stopped
+
+services:
+  frontend:
+    build: ./frontend
+    ports:
+      - "8080:8080"
+    depends_on:
+      - api
+    restart: unless-stopped
+
+  api:
+    <<: *backend
+    ports:
+      - "127.0.0.1:8000:8000"
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "http://localhost:8000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  worker:
+    <<: *backend
+    command: ["python", "-m", "app.worker.run"]
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: smartspeaking
+      POSTGRES_PASSWORD: smartspeaking
+      POSTGRES_DB: smartspeaking
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U smartspeaking"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "127.0.0.1:6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  ollama:
+    image: ollama/ollama:latest
+    profiles: ["ollama"]
+    volumes:
+      - ollama:/root/.ollama
+    ports:
+      - "127.0.0.1:11434:11434"
+    restart: unless-stopped
+
+volumes:
+  media:
+  models:
+  pgdata:
+  ollama:
