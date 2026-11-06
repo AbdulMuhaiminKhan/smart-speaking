@@ -7,7 +7,7 @@ import uuid
 from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import JSON, DateTime, Enum, Float, ForeignKey, Integer, String, Text, Uuid
+from sqlalchemy import JSON, Boolean, DateTime, Enum, Float, ForeignKey, Integer, String, Text, Uuid
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
@@ -46,13 +46,33 @@ class User(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     email: Mapped[str] = mapped_column(String(320), unique=True, index=True)
-    # Null for the built-in local user until auth lands in Phase 6.
+    name: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    # Null only for the legacy built-in local user from before accounts existed.
     password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    settings: Mapped[dict[str, Any]] = mapped_column(JsonType, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
     sessions: Mapped[list[PracticeSession]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
     )
+    auth_sessions: Mapped[list[AuthSession]] = relationship(
+        back_populates="user", cascade="all, delete-orphan"
+    )
+
+
+class AuthSession(Base):
+    """A signed-in browser. Only a SHA-256 hash of the cookie token is stored."""
+
+    __tablename__ = "auth_sessions"
+
+    token_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+    user: Mapped[User] = relationship(back_populates="auth_sessions")
 
 
 class PracticeSession(Base):
@@ -74,6 +94,7 @@ class PracticeSession(Base):
     media_path: Mapped[str] = mapped_column(String(1024))
     size_bytes: Mapped[int] = mapped_column(Integer)
     duration_s: Mapped[float | None] = mapped_column(Float, nullable=True)
+    media_deleted: Mapped[bool] = mapped_column(Boolean, default=False)
 
     status: Mapped[SessionStatus] = mapped_column(
         Enum(SessionStatus, native_enum=False), default=SessionStatus.uploaded

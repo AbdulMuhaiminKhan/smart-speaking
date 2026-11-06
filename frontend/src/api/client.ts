@@ -15,6 +15,7 @@ export interface PracticeSession {
   original_filename: string
   size_bytes: number
   duration_s: number | null
+  media_deleted: boolean
   status: SessionStatus
   stage: string | null
   progress: number
@@ -67,6 +68,13 @@ async function parseError(res: Response): Promise<ApiError> {
   }
 }
 
+let onUnauthorized: (() => void) | null = null
+
+/** The auth context registers this so an expired session sends the user to sign in. */
+export function setUnauthorizedHandler(fn: (() => void) | null) {
+  onUnauthorized = fn
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   let res: Response
   try {
@@ -74,7 +82,11 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   } catch {
     throw new ApiError(0, 'network', 'Cannot reach the SmartSpeaking server. Is it running?')
   }
-  if (!res.ok) throw await parseError(res)
+  if (!res.ok) {
+    const err = await parseError(res)
+    if (res.status === 401 && !path.startsWith('/api/auth/')) onUnauthorized?.()
+    throw err
+  }
   if (res.status === 204) return undefined as T
   return (await res.json()) as T
 }
@@ -228,4 +240,58 @@ export const reportApi = {
   getVoice: (id: string) => optional(request<VoiceResult>(`/api/sessions/${id}/results/voice`)),
   getBody: (id: string) => optional(request<BodyResult>(`/api/sessions/${id}/results/body`)),
   pdfUrl: (id: string) => `/api/sessions/${id}/report.pdf`,
+}
+
+// ---- Accounts and progress (Phase 6) ----
+
+export interface UserSettings {
+  language: 'en'
+  model_preset: ModelPreset
+  auto_delete_video: boolean
+}
+
+export interface User {
+  id: string
+  email: string
+  name: string | null
+  settings: UserSettings
+  created_at: string
+}
+
+export interface SessionScores {
+  id: string
+  title: string
+  created_at: string
+  duration_s: number | null
+  overall: number | null
+  categories: Partial<Record<Category, number | null>>
+}
+
+export interface Progress {
+  sessions: SessionScores[]
+  count: number
+  average: number | null
+  best: number | null
+  latest: number | null
+  change: number | null
+  category_change: Partial<Record<Category, number | null>>
+}
+
+const json = (method: string, body: unknown): RequestInit => ({
+  method,
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify(body),
+})
+
+export const authApi = {
+  me: () => request<User>('/api/auth/me'),
+  register: (email: string, password: string, name?: string) =>
+    request<User>('/api/auth/register', json('POST', { email, password, name: name || null })),
+  login: (email: string, password: string) => request<User>('/api/auth/login', json('POST', { email, password })),
+  logout: () => request<void>('/api/auth/logout', { method: 'POST' }),
+  updateSettings: (settings: UserSettings) => request<User>('/api/auth/me/settings', json('PUT', settings)),
+  changePassword: (current_password: string, new_password: string) =>
+    request<void>('/api/auth/me/password', json('POST', { current_password, new_password })),
+  deleteAccount: (password: string) => request<void>('/api/auth/me', json('DELETE', { password })),
+  progress: () => request<Progress>('/api/progress'),
 }

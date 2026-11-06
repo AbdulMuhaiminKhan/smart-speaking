@@ -38,13 +38,28 @@ def enqueued() -> list[str]:
 
 
 @pytest.fixture()
-def client(settings_env: Path, enqueued: list[str]) -> Iterator[TestClient]:
+def anon_client(settings_env: Path, enqueued: list[str]) -> Iterator[TestClient]:
+    """A client that is not signed in."""
+    from app.api import deps
     from app.main import create_app
+    from app.services import auth
 
     app = create_app()
+    limiter = auth.LoginLimiter(auth.MemoryCounter())
     app.dependency_overrides[queue.get_enqueuer] = lambda: enqueued.append
+    app.dependency_overrides[deps.get_limiter] = lambda: limiter
     with TestClient(app) as c:
         yield c
+
+
+@pytest.fixture()
+def client(anon_client: TestClient) -> TestClient:
+    """A client signed in as a fresh user."""
+    res = anon_client.post(
+        "/api/auth/register", json={"email": "speaker@example.com", "password": "correct horse"}
+    )
+    assert res.status_code == 201, res.text
+    return anon_client
 
 
 requires_ffmpeg = pytest.mark.skipif(

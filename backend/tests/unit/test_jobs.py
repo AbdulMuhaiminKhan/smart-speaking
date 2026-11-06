@@ -116,3 +116,43 @@ def test_job_reports_input_errors(settings_env: Path) -> None:
 
 def test_job_ignores_deleted_session(settings_env: Path) -> None:
     jobs.analyze_session("00000000-0000-0000-0000-000000000000")
+
+
+@requires_ffmpeg
+def test_auto_delete_video_setting(settings_env: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    import uuid as _uuid
+
+    monkeypatch.setattr(transcribe, "run", fake_transcribe)
+    monkeypatch.setenv("SS_LLM_ENABLED", "false")
+    from app.config import get_settings
+
+    get_settings.cache_clear()
+    monkeypatch.setattr(body, "run", lambda *a, **k: body.aggregate([], body.SAMPLE_FPS, 6.0))
+    monkeypatch.setattr(
+        pronunciation,
+        "run",
+        lambda *a, **k: PronunciationMetrics(
+            method="phonemes",
+            words_checked=0,
+            mean_similarity=None,
+            low_confidence_ratio=0.0,
+            unclear_per_100_words=0.0,
+            unclear_words=[],
+        ),
+    )
+    clip = make_test_video(settings_env / "clip.mp4")
+    sid = make_session(clip)
+    db = get_sessionmaker()()
+    ps = db.get(PracticeSession, _uuid.UUID(sid))
+    assert ps is not None
+    ps.user.settings = {"auto_delete_video": True}
+    db.commit()
+    db.close()
+
+    jobs.analyze_session(sid)
+
+    db = get_sessionmaker()()
+    ps = db.get(PracticeSession, _uuid.UUID(sid))
+    assert ps is not None and ps.status == SessionStatus.completed and ps.media_deleted
+    assert not clip.exists()
+    assert db.get(AnalysisResult, (ps.id, "report")) is not None

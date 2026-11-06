@@ -24,7 +24,7 @@ export function SessionsPage() {
       {sessions.length === 0 ? (
         <p className="mt-4 text-slate-600 dark:text-slate-400">
           No sessions yet.{' '}
-          <Link to="/" className="text-brand-600">
+          <Link to="/upload" className="text-brand-600">
             Upload your first recording
           </Link>
           .
@@ -44,7 +44,24 @@ export function SessionsPage() {
                     {s.duration_s !== null && ` · ${formatTime(s.duration_s)}`}
                   </p>
                 </div>
-                <StatusBadge status={s.status} />
+                <div className="flex items-center gap-3">
+                  <StatusBadge status={s.status} />
+                  <button
+                    type="button"
+                    aria-label={`Delete ${s.title}`}
+                    onClick={(e) => {
+                      e.preventDefault()
+                      if (!confirm(`Delete "${s.title}" and its recording? This cannot be undone.`)) return
+                      api
+                        .deleteSession(s.id)
+                        .then(() => setSessions((all) => all?.filter((x) => x.id !== s.id) ?? null))
+                        .catch(() => setError('Delete failed.'))
+                    }}
+                    className="rounded px-2 py-1 text-xs text-slate-400 hover:bg-red-50 hover:text-red-700 dark:hover:bg-red-950"
+                  >
+                    Delete
+                  </button>
+                </div>
               </Link>
             </li>
           ))}

@@ -20,6 +20,17 @@ MAX_MESSAGE_BYTES = 64 * 1024  # about 2 s of 16 kHz int16 audio
 
 @router.websocket("/ws")
 async def live_ws(ws: WebSocket, lang: str = "en") -> None:
+    from app.db.session import get_sessionmaker
+    from app.services import auth
+
+    db = get_sessionmaker()()
+    try:
+        signed_in = auth.user_for_token(db, ws.cookies.get(auth.COOKIE_NAME)) is not None
+    finally:
+        db.close()
+    if not signed_in:
+        await ws.close(code=4401, reason="not signed in")
+        return
     await ws.accept()
     settings = get_settings()
     loop = asyncio.get_running_loop()

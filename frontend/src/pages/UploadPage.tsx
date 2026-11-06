@@ -1,6 +1,7 @@
 import { useRef, useState, type DragEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ApiError, uploadSession, type ModelPreset, type SessionMode } from '../api/client'
+import { useAuth } from '../auth/AuthContext'
 import { ProgressBar } from '../components/ProgressBar'
 import { formatBytes, formatTime } from '../lib/format'
 import { checkDuration, checkExtension, checkSize, readDuration } from '../lib/validateFile'
@@ -13,6 +14,7 @@ const PRESETS: { value: ModelPreset; label: string; hint: string }[] = [
 
 export function UploadPage() {
   const navigate = useNavigate()
+  const { user } = useAuth()
   const inputRef = useRef<HTMLInputElement>(null)
   const abortRef = useRef<AbortController | null>(null)
   const [file, setFile] = useState<File | null>(null)
@@ -21,7 +23,7 @@ export function UploadPage() {
   const [mode, setMode] = useState<SessionMode>('free_talk')
   const [target, setTarget] = useState(180)
   const [script, setScript] = useState('')
-  const [preset, setPreset] = useState<ModelPreset>('balanced')
+  const [preset, setPreset] = useState<ModelPreset>(user?.settings.model_preset ?? 'balanced')
   const [error, setError] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
   const [progress, setProgress] = useState(0)

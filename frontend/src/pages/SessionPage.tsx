@@ -184,7 +184,7 @@ export function SessionPage() {
               Try again
             </button>
           ) : (
-            <Link to="/" className="mt-3 inline-block text-sm underline">
+            <Link to="/upload" className="mt-3 inline-block text-sm underline">
               Upload a different file
             </Link>
           )}
@@ -201,15 +201,21 @@ export function SessionPage() {
 
       <div className="grid gap-6 lg:grid-cols-2">
         <div className="space-y-3">
+          {session.media_deleted ? (
+            <div className="grid aspect-video place-items-center rounded-xl bg-slate-100 p-6 text-center text-sm text-slate-500 dark:bg-slate-800">
+              The video was deleted after analysis, as set in Settings. Your report and transcript are kept.
+            </div>
+          ) : (
           <video
-            ref={videoRef}
-            src={api.mediaUrl(id)}
-            controls
-            playsInline
-            onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
-            onLoadedMetadata={(e) => setDuration(Number.isFinite(e.currentTarget.duration) ? e.currentTarget.duration : 0)}
-            className="w-full rounded-xl bg-black"
-          />
+              ref={videoRef}
+              src={api.mediaUrl(id)}
+              controls
+              playsInline
+              onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
+              onLoadedMetadata={(e) => setDuration(Number.isFinite(e.currentTarget.duration) ? e.currentTarget.duration : 0)}
+              className="w-full rounded-xl bg-black"
+            />
+          )}
           {report && (
             <VideoTimeline
               issues={report.issues}

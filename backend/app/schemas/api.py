@@ -21,6 +21,7 @@ class SessionOut(BaseModel):
     original_filename: str
     size_bytes: int
     duration_s: float | None
+    media_deleted: bool
     status: SessionStatus
     stage: str | None
     progress: float

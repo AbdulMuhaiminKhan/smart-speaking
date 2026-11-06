@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "models": "node scripts/fetch-models.mjs",
     "predev": "node scripts/fetch-models.mjs",
-    "prebuild": "node scripts/fetch-models.mjs"
+    "prebuild": "node scripts/fetch-models.mjs",
+    "test": "vitest run"
   },
   "dependencies": {
     "@mediapipe/tasks-vision": "^1.2.2",
@@ -27,6 +28,7 @@
     "oxlint": "^1.90.0",
     "tailwindcss": "^4.3.4",
     "typescript": "~7.0.2",
-    "vite": "^8.3.6"
+    "vite": "^8.3.6",
+    "vitest": "^5.1.0"
   }
 }

@@ -40,6 +40,7 @@ class Settings(BaseSettings):
 
     job_timeout_s: int = 60 * 60
 
+    cookie_secure: bool = False  # set true when served over HTTPS
     cors_origins: list[str] = ["http://localhost:5173", "http://localhost:8080"]
 
 

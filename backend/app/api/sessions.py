@@ -10,6 +10,7 @@ from fastapi.responses import FileResponse, Response
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.api.deps import UserDep
 from app.config import MODEL_PRESETS, Settings, get_settings
 from app.db.models import (
     AnalysisResult,
@@ -19,7 +20,7 @@ from app.db.models import (
     SessionStatus,
     User,
 )
-from app.db.session import get_db, get_or_create_local_user
+from app.db.session import get_db
 from app.schemas.api import SessionOut
 from app.services import storage
 from app.services.queue import Enqueuer, get_enqueuer
@@ -28,14 +29,6 @@ router = APIRouter(prefix="/api/sessions", tags=["sessions"])
 
 DbDep = Annotated[Session, Depends(get_db)]
 SettingsDep = Annotated[Settings, Depends(get_settings)]
-
-
-def current_user(db: DbDep) -> User:
-    # Replaced by cookie-session auth in Phase 6.
-    return get_or_create_local_user(db)
-
-
-UserDep = Annotated[User, Depends(current_user)]
 
 
 def error(status_code: int, code: str, message: str) -> HTTPException:
@@ -151,6 +144,8 @@ def get_result(session_id: uuid.UUID, step: str, db: DbDep, user: UserDep) -> di
 @router.get("/{session_id}/media")
 def get_media(session_id: uuid.UUID, db: DbDep, user: UserDep) -> FileResponse:
     ps = get_owned_session(session_id, db, user)
+    if ps.media_deleted:
+        raise error(410, "video_deleted", "The video was deleted after analysis (see Settings).")
     return FileResponse(ps.media_path, filename=ps.original_filename)
 
 

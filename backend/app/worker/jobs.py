@@ -222,6 +222,12 @@ def analyze_session(session_id: str) -> None:
                 )
                 save_result(db, sid, "report", rep.model_dump())
 
+            if (ps.user.settings or {}).get("auto_delete_video"):
+                # Privacy setting: keep the report, delete the recording and audio.
+                Path(ps.media_path).unlink(missing_ok=True)
+                audio_path.unlink(missing_ok=True)
+                ps.media_deleted = True
+
             ps.status = SessionStatus.completed
             ps.stage = None
             ps.progress = 1.0
