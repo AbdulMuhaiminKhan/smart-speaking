@@ -5,7 +5,7 @@ your voice, pacing, filler words, language, pronunciation, eye contact, posture 
 body language. Everything runs on your own machine with open-source models. Nothing
 is sent to any cloud service.
 
-> Status: Phase 2 of 6 (upload and live recording, transcription, voice, pacing and language analysis, basic report). Scoring rules: [docs/scoring.md](docs/scoring.md).
+> Status: Phase 3 of 6 (upload and live recording with tracking overlay, transcription, voice, pacing, language, eye contact, posture and body language, basic report). Scoring rules: [docs/scoring.md](docs/scoring.md).
 
 ## Quick start (Docker)
 
@@ -58,7 +58,11 @@ language, pronunciation, body language, scoring and the LLM report.
 
 | Model | Purpose | Size |
 | --- | --- | --- |
+| faster-whisper tiny | Live words per minute and filler counter | 75 MB |
 | faster-whisper base / small / large-v3-turbo | Transcript with word timestamps (Fast / Balanced / Accurate) | 145 MB / 480 MB / 1.6 GB |
+| MediaPipe Pose Landmarker (full on the server, lite in the browser) | Posture, swaying, arms | 9 MB / 5.5 MB |
+| MediaPipe Face Landmarker | Eye contact (head pose, iris, eye-look), expression | 3.6 MB |
+| MediaPipe Hand Landmarker | Gestures, open hands, fidgeting, face touches | 7.5 MB |
 
 More models are added in later phases; see `docs/models.md` when it lands.
 

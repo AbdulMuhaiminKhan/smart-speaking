@@ -5,7 +5,16 @@ from __future__ import annotations
 import math
 
 from app.pipeline import pacing as pacing_mod
-from app.schemas.metrics import Issue, LanguageMetrics, PacingMetrics, TimePoint, VoiceMetrics
+from app.schemas.metrics import (
+    BodyMetrics,
+    Category,
+    Issue,
+    LanguageMetrics,
+    PacingMetrics,
+    Severity,
+    TimePoint,
+    VoiceMetrics,
+)
 
 MONOTONE_WINDOW_S = 10
 MONOTONE_STRETCH_ST = 1.2  # pitch spread inside a 10 s window that sounds flat
@@ -183,10 +192,52 @@ def language_issues(lang: LanguageMetrics) -> list[Issue]:
     return out
 
 
+BODY_ISSUES: dict[str, tuple[Category, Severity, str]] = {
+    "looking_away": ("eye_contact", "major", "Looking away from the camera"),
+    "head_down": ("posture", "major", "Head down"),
+    "slouch": ("posture", "major", "Slouching"),
+    "arms_crossed": ("body_language", "major", "Arms crossed"),
+    "hands_hidden": ("body_language", "info", "Hands out of view"),
+    "face_touch": ("body_language", "minor", "Touching your face"),
+    "fidget": ("body_language", "minor", "Fidgeting with your hands"),
+    "sway": ("body_language", "minor", "Swaying side to side"),
+    "tense": ("body_language", "minor", "Tense facial expression"),
+}
+
+
+def body_issues(b: BodyMetrics, skip: set[str]) -> list[Issue]:
+    out: list[Issue] = []
+    for i, seg in enumerate(b.segments):
+        if seg.kind not in BODY_ISSUES:
+            continue
+        cat, sev, msg = BODY_ISSUES[seg.kind]
+        if cat in skip:
+            continue
+        secs = seg.end - seg.start
+        out.append(
+            Issue(
+                id=f"{seg.kind}-{i}",
+                category=cat,
+                kind=seg.kind,
+                start=seg.start,
+                end=seg.end,
+                severity=sev,
+                message=f"{msg} ({secs:.0f} s)" if secs >= 2 else msg,
+            )
+        )
+    return out
+
+
 def build(
-    pacing: PacingMetrics | None, voice: VoiceMetrics | None, language: LanguageMetrics | None
+    pacing: PacingMetrics | None,
+    voice: VoiceMetrics | None,
+    language: LanguageMetrics | None,
+    body: BodyMetrics | None = None,
+    skip_categories: set[str] | None = None,
 ) -> list[Issue]:
     issues: list[Issue] = []
+    if body:
+        issues += body_issues(body, skip_categories or set())
     if pacing:
         issues += pacing_issues(pacing)
     if voice:

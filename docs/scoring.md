@@ -123,10 +123,66 @@ Word lists are in
 | long_sentences | share of sentences over 30 words (3+ sentences) | 15% | 50% | 10 |
 | off_script | script coverage | below 90% | 50% | 25 |
 
+## Eye contact, posture and body language
+
+Measured with MediaPipe Pose, Face Landmarker (with iris, blendshapes and head
+pose) and Hand Landmarker on frames sampled at 10 per second (the face model
+runs on every second sampled frame, 5 per second). Fidgeting and swaying are
+1 to 4 Hz movements, which 10 frames per second can catch. Distances are
+divided by shoulder width, so they do not depend on how far you sit from the
+camera.
+
+**These are estimates.** A webcam cannot see exactly where you look, and
+lighting, glasses and camera angle all affect tracking.
+
+- **Eye contact** (per frame with a face): head turned at most 15° sideways and
+  20° up or down, and the eyes not turned away (MediaPipe eye-look blendshapes
+  below 0.45 sideways or up, below 0.55 down, because the screen usually sits
+  just under the camera). In live mode, the first 3 seconds calibrate where
+  your camera is.
+- **Slouching**: ear height above the shoulders is less than 0.35 shoulder widths.
+- **Head down**: nose height above the shoulders is less than 0.25 shoulder widths.
+- **Shoulder tilt**: shoulder line more than 8° from level.
+- **Leaning**: head more than 0.3 shoulder widths to one side of the shoulder centre.
+- **Arms crossed**: each wrist past the body's centre line at chest height.
+- **Gestures**: a hand moving faster than 1 shoulder width per second starts a gesture.
+- **Open hands**: at least three fingertips farther from the wrist than their middle joints.
+- **Fidgeting**: both hands close together (under 0.6 shoulder widths) and moving,
+  or a hand touching the face.
+- **Face touch**: hand centre within 0.6 shoulder widths of the nose for 0.5 s or more.
+- **Swaying**: in a 2 second window, the shoulder centre wobbles more than 0.04
+  shoulder widths and crosses its average at least twice.
+- **Expression**: smiling when the smile blendshape averages 0.35 or more; tense
+  when brow-lowering or lip-pressing averages 0.4 or more; otherwise neutral.
+
+| Category | Rule | Metric | Starts at | Full at | Max points |
+| --- | --- | --- | --- | --- | --- |
+| Eye contact | low_eye_contact | share of time with eye contact | below 75% | 30% | 60 |
+| Eye contact | long_look_aways | look-aways of 3 s+ per minute | 0.5 | 3 | 20 |
+| Posture | slouching | share of time slouching | 10% | 50% | 35 |
+| Posture | head_down | share of time head down | 10% | 40% | 25 |
+| Posture | shoulder_tilt | share of time tilted | 20% | 60% | 15 |
+| Posture | leaning | share of time leaning | 20% | 60% | 10 |
+| Body language | hands_out_of_frame | share of time hands visible | below 20% | 0% | 10 |
+| Body language | few_gestures | gestures per minute of visible hands* | below 3 | 0 | 15 |
+| Body language | too_many_gestures | gestures per minute of visible hands* | 40 | 80 | 10 |
+| Body language | closed_gestures | share of open hands* | below 40% | 10% | 10 |
+| Body language | arms_crossed | share of time arms crossed | 5% | 30% | 20 |
+| Body language | fidgeting | share of visible-hand time fidgeting* | 10% | 40% | 20 |
+| Body language | face_touching | face touches per minute | 0.5 | 3 | 10 |
+| Body language | swaying | share of time swaying | 10% | 40% | 15 |
+| Body language | tense_face | share of time with a tense face | 30% | 70% | 10 |
+
+\* Only when your hands are visible at least 30% of the time.
+
+**Not scored instead of guessed:** eye contact is not scored when your face is
+visible in less than 30% of the video. Posture and body language are not
+scored when your shoulders are visible in less than 30%. A video that is
+mostly dark (mean brightness under 50 of 255) gets a lighting warning.
+
 ## Coming in later phases
 
-Pronunciation (Phase 4), eye contact, posture and body language (Phase 3) are
-shown as "not scored" until their analysis is built.
+Pronunciation (Phase 4) is shown as "not scored" until its analysis is built.
 
 ## Known limits
 

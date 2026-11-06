@@ -96,3 +96,16 @@ def test_issues_merge_fast_windows() -> None:
     assert len(fast) == 1
     assert fast[0].severity == "major"
     assert fast[0].start == pytest.approx(0, abs=0.5)
+
+
+def test_body_not_scored_reasons() -> None:
+    from app.pipeline import body
+
+    assert set(scoring.body_not_scored(None, has_video=False)) == {
+        "eye_contact",
+        "posture",
+        "body_language",
+    }
+    empty = body.aggregate([], body.SAMPLE_FPS, 10)
+    reasons = scoring.body_not_scored(empty, has_video=True)
+    assert "visible in only 0%" in reasons["eye_contact"]

@@ -6,7 +6,7 @@ import pytest
 
 from app.db.models import AnalysisResult, PracticeSession, SessionStatus
 from app.db.session import get_or_create_local_user, get_sessionmaker
-from app.pipeline import transcribe
+from app.pipeline import body, transcribe
 from app.schemas.transcript import Segment, Transcript, Word
 from app.worker import jobs
 from tests.conftest import make_test_video, requires_ffmpeg
@@ -58,6 +58,7 @@ def test_job_completes_and_stores_results(
     settings_env: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setattr(transcribe, "run", fake_transcribe)
+    monkeypatch.setattr(body, "run", lambda *a, **k: body.aggregate([], body.SAMPLE_FPS, 6.0))
     sid = make_session(make_test_video(settings_env / "clip.mp4"))
 
     jobs.analyze_session(sid)
@@ -69,7 +70,7 @@ def test_job_completes_and_stores_results(
     assert ps.progress == 1.0
     assert ps.duration_s == pytest.approx(6.0, abs=0.2)
     steps = {r.step for r in db.query(AnalysisResult).filter_by(session_id=ps.id)}
-    assert steps == {"media", "transcript", "pacing", "language", "voice", "report"}
+    assert steps == {"media", "transcript", "pacing", "language", "voice", "body", "report"}
 
 
 @requires_ffmpeg

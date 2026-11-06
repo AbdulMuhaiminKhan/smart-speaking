@@ -134,3 +134,99 @@ categories:
       full: 0.5
       max_penalty: 25
       message: "You covered {value:.0%} of your script."
+
+  eye_contact:
+    - id: low_eye_contact
+      metric: eye_contact_ratio
+      below: 0.75
+      full: 0.3
+      max_penalty: 60
+      message: "You looked at the camera {value:.0%} of the time (aim for 75% or more)."
+    - id: long_look_aways
+      metric: look_aways_per_min
+      above: 0.5
+      full: 3
+      max_penalty: 20
+      message: "{value:.1f} times per minute you looked away for 3 seconds or longer."
+
+  posture:
+    - id: slouching
+      metric: slouch_ratio
+      above: 0.1
+      full: 0.5
+      max_penalty: 35
+      message: "You were slouching {value:.0%} of the time."
+    - id: head_down
+      metric: head_down_ratio
+      above: 0.1
+      full: 0.4
+      max_penalty: 25
+      message: "Your head was down {value:.0%} of the time."
+    - id: shoulder_tilt
+      metric: tilt_ratio
+      above: 0.2
+      full: 0.6
+      max_penalty: 15
+      message: "Your shoulders were tilted {value:.0%} of the time."
+    - id: leaning
+      metric: lean_ratio
+      above: 0.2
+      full: 0.6
+      max_penalty: 10
+      message: "You leaned to one side {value:.0%} of the time."
+
+  body_language:
+    - id: hands_out_of_frame
+      metric: hands_visible_ratio
+      below: 0.2
+      full: 0.0
+      max_penalty: 10
+      message: "Your hands were visible only {value:.0%} of the time, so gestures could not help your message."
+    - id: few_gestures
+      metric: gestures_per_min_visible
+      below: 3
+      full: 0
+      max_penalty: 15
+      message: "{value:.1f} gestures per minute while your hands were visible (a few per minute is natural)."
+    - id: too_many_gestures
+      metric: gestures_per_min_visible
+      above: 40
+      full: 80
+      max_penalty: 10
+      message: "{value:.0f} gestures per minute, which can look restless."
+    - id: closed_gestures
+      metric: open_gesture_ratio_visible
+      below: 0.4
+      full: 0.1
+      max_penalty: 10
+      message: "Your hands were open only {value:.0%} of the time they were visible."
+    - id: arms_crossed
+      metric: arms_crossed_ratio
+      above: 0.05
+      full: 0.3
+      max_penalty: 20
+      message: "Your arms were crossed {value:.0%} of the time."
+    - id: fidgeting
+      metric: fidget_ratio
+      above: 0.1
+      full: 0.4
+      max_penalty: 20
+      message: "You were fidgeting with your hands {value:.0%} of the time they were visible."
+    - id: face_touching
+      metric: face_touches_per_min
+      above: 0.5
+      full: 3
+      max_penalty: 10
+      message: "{value:.1f} face touches per minute."
+    - id: swaying
+      metric: sway_ratio
+      above: 0.1
+      full: 0.4
+      max_penalty: 15
+      message: "You swayed side to side {value:.0%} of the time."
+    - id: tense_face
+      metric: tense_ratio
+      above: 0.3
+      full: 0.7
+      max_penalty: 10
+      message: "Your face looked tense {value:.0%} of the time."

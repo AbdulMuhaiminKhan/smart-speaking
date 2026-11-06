@@ -18,9 +18,10 @@ from sqlalchemy.orm import Session
 from app.config import MODEL_PRESETS, get_settings
 from app.db.models import AnalysisResult, PracticeSession, SessionStatus
 from app.db.session import get_sessionmaker
+from app.pipeline import body, language, pacing, preprocess, report, scoring, transcribe, voice
 from app.pipeline import issues as issues_mod
-from app.pipeline import language, pacing, preprocess, report, scoring, transcribe, voice
 from app.pipeline.errors import PipelineError
+from app.schemas.metrics import BodyMetrics
 from app.services.storage import session_dir
 
 log = logging.getLogger(__name__)
@@ -35,10 +36,11 @@ class Stage:
 
 # Later phases add stages here (voice, language, pronunciation, body, scoring, report).
 STAGES = {
-    "preprocess": Stage("preprocess", 0.0, 0.05),
-    "transcribe": Stage("transcribe", 0.05, 0.85),
-    "language": Stage("language", 0.85, 0.88),
-    "voice": Stage("voice", 0.88, 0.97),
+    "preprocess": Stage("preprocess", 0.0, 0.04),
+    "transcribe": Stage("transcribe", 0.04, 0.55),
+    "language": Stage("language", 0.55, 0.57),
+    "voice": Stage("voice", 0.57, 0.62),
+    "body": Stage("body", 0.62, 0.97),
     "report": Stage("report", 0.97, 1.0),
 }
 
@@ -134,23 +136,49 @@ def analyze_session(session_id: str) -> None:
             voice_m = voice.run(audio_path, transcript, pacing_m, language_m.fillers_per_min)
             save_result(db, sid, "voice", voice_m.model_dump())
 
+            body_m: BodyMetrics | None = None
+            if info.has_video:
+                progress.stage("body")
+                try:
+                    body_m = body.run(
+                        Path(ps.media_path),
+                        settings.models_dir,
+                        info.duration_s,
+                        on_progress=lambda f: progress.update("body", f),
+                    )
+                    save_result(db, sid, "body", body_m.model_dump())
+                    if body_m.too_dark_ratio > 0.5:
+                        ps.warnings = [
+                            *ps.warnings,
+                            "bad_lighting: The video is very dark, so body tracking may be "
+                            "less accurate. Face a window or a lamp next time.",
+                        ]
+                except Exception:
+                    log.exception("body analysis failed for session %s", session_id)
+
             progress.stage("report")
             not_scored = {
                 "pronunciation": "Pronunciation analysis arrives in a later version.",
-                "eye_contact": "Eye contact analysis arrives in a later version.",
-                "posture": "Posture analysis arrives in a later version.",
-                "body_language": "Body language analysis arrives in a later version.",
+                **scoring.body_not_scored(body_m, info.has_video),
             }
             scores = scoring.score(
-                pacing=pacing_m, voice=voice_m, language=language_m, not_scored=not_scored
+                pacing=pacing_m,
+                voice=voice_m,
+                language=language_m,
+                body=body_m,
+                duration_s=info.duration_s,
+                not_scored=not_scored,
             )
-            issue_list = issues_mod.build(pacing_m, voice_m, language_m)
+            issue_list = issues_mod.build(
+                pacing_m, voice_m, language_m, body_m, skip_categories=set(not_scored)
+            )
             rep = report.build(
                 scores=scores,
                 issues=issue_list,
                 pacing=pacing_m,
                 voice=voice_m,
                 language=language_m,
+                body=body_m,
             )
             save_result(db, sid, "report", rep.model_dump())
 

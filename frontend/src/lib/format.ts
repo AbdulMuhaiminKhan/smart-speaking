@@ -15,5 +15,6 @@ export const STAGE_LABELS: Record<string, string> = {
   transcribe: 'Transcribing your speech',
   language: 'Checking pace, pauses and word choice',
   voice: 'Analyzing pitch, volume and tone',
+  body: 'Tracking eye contact, posture and gestures',
   report: 'Scoring and writing your report',
 }

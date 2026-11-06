@@ -12,7 +12,7 @@ from typing import Literal
 from pydantic import BaseModel
 
 from app.pipeline.scoring import Scores
-from app.schemas.metrics import Issue, LanguageMetrics, PacingMetrics, VoiceMetrics
+from app.schemas.metrics import BodyMetrics, Issue, LanguageMetrics, PacingMetrics, VoiceMetrics
 
 
 class Advice(BaseModel):
@@ -138,9 +138,102 @@ ADVICE: dict[str, Advice] = {
         fix="Check the skipped passages and decide if they belong in the talk.",
         drill="Run through the script once reading, once from keywords only.",
     ),
+    "low_eye_contact": Advice(
+        title="Look at the camera",
+        why="The camera is your audience's eyes. Looking away reads as unsure or distracted.",
+        fix="Put a small sticker next to your webcam and talk to it. Glance at notes only between sentences.",
+        drill="Record one minute while keeping your eyes on the camera lens, then watch it back.",
+    ),
+    "long_look_aways": Advice(
+        title="Shorten your look-aways",
+        why="Long glances away break the connection with your audience.",
+        fix="When you need to think or check notes, keep it under two seconds and come back to the camera.",
+        drill="Practice your talk with notes below the camera and return your eyes after every sentence.",
+    ),
+    "slouching": Advice(
+        title="Sit or stand tall",
+        why="Slouching makes you look tired and also squeezes your breathing and voice.",
+        fix="Feet flat, back straight, shoulders down and back, as if a string pulls up the top of your head.",
+        drill="Before each practice, roll your shoulders back three times and take two deep breaths.",
+    ),
+    "head_down": Advice(
+        title="Keep your chin up",
+        why="Looking down hides your face and drops your voice.",
+        fix="Raise your notes or screen to eye level so you do not need to look down.",
+        drill="Practice with your notes taped next to the camera.",
+    ),
+    "shoulder_tilt": Advice(
+        title="Level your shoulders",
+        why="Tilted shoulders look casual or unsure.",
+        fix="Spread your weight evenly and sit square to the camera.",
+        drill="Check your shoulders in a mirror before you start and once in the middle.",
+    ),
+    "leaning": Advice(
+        title="Stay centred",
+        why="Leaning to one side looks unsettled.",
+        fix="Centre yourself in the frame and keep your head over your shoulders.",
+        drill="Record 30 seconds and check that your nose stays above the middle of your chest.",
+    ),
+    "hands_out_of_frame": Advice(
+        title="Let your hands be seen",
+        why="Gestures help explain and emphasize, but only if people can see them.",
+        fix="Move back a little from the camera so your hands are in frame at chest height.",
+        drill="Frame yourself from the waist up and explain one idea using a gesture.",
+    ),
+    "few_gestures": Advice(
+        title="Use your hands",
+        why="Natural gestures make you look confident and help people follow.",
+        fix='Use simple gestures for numbers, size and contrast ("on one hand… on the other").',
+        drill="Explain three points while showing one, two, three fingers.",
+    ),
+    "too_many_gestures": Advice(
+        title="Calm your hands",
+        why="Constant movement pulls attention away from your words.",
+        fix="Return your hands to a resting position between gestures.",
+        drill="Practice with your hands resting together at waist height, gesturing only on key words.",
+    ),
+    "closed_gestures": Advice(
+        title="Open up your gestures",
+        why="Open palms look honest and welcoming; fists and hidden hands look guarded.",
+        fix="Show your palms when you make a point, at about chest height.",
+        drill="Say your main message three times with open palms facing the camera.",
+    ),
+    "arms_crossed": Advice(
+        title="Uncross your arms",
+        why="Crossed arms look defensive, even when you are just comfortable.",
+        fix="Rest your hands loosely in front of you between gestures.",
+        drill="Practice your opening with hands visible and arms apart.",
+    ),
+    "fidgeting": Advice(
+        title="Reduce fidgeting",
+        why="Fidgeting signals nerves and distracts from what you say.",
+        fix="Hold a pen or rest your hands lightly together when you are not gesturing.",
+        drill="Record one minute and stop every time your hands fidget; start again calmly.",
+    ),
+    "face_touching": Advice(
+        title="Keep your hands away from your face",
+        why="Touching your face often reads as nervousness.",
+        fix="Notice the urge and lower your hands to a resting position instead.",
+        drill="Practice with your hands resting on the desk for a full minute.",
+    ),
+    "swaying": Advice(
+        title="Stand still",
+        why="Swaying side to side is distracting and looks nervous.",
+        fix="Plant your feet hip-width apart and move only with purpose.",
+        drill="Practice your talk with your weight evenly on both feet, pausing to reset if you sway.",
+    ),
+    "tense_face": Advice(
+        title="Relax your face",
+        why="A tense face makes you look stressed, even if you feel fine.",
+        fix="Unclench your jaw and soften your eyebrows. Smile at the start and the end.",
+        drill="Before you start, take a deep breath and smile at the camera for two seconds.",
+    ),
 }
 
 CATEGORY_WHY: dict[str, str] = {
+    "eye_contact": "Eye contact builds trust and keeps people listening.",
+    "posture": "Good posture looks confident and helps your voice carry.",
+    "body_language": "Open, calm body language supports what you say.",
     "pacing": "Pace and pauses decide whether listeners can keep up.",
     "voice": "Pitch and volume carry emotion and keep attention.",
     "language": "Clear, direct words make your message stick.",
@@ -188,6 +281,7 @@ def strengths(
     voice: VoiceMetrics | None,
     language: LanguageMetrics | None,
     scores: Scores,
+    body: BodyMetrics | None = None,
 ) -> list[str]:
     """Positive observations, each tied to a metric with no penalty."""
     passed = {r.id for c in scores.categories.values() for r in c.rules if r.penalty == 0}
@@ -232,6 +326,21 @@ def strengths(
             out.append((1.8, "Varied vocabulary."))
         if language.script and "off_script" in passed:
             out.append((2.5, f"You covered {language.script.coverage:.0%} of your script."))
+    if body:
+        scored = {k for k, c in scores.categories.items() if c.status == "scored"}
+        if "eye_contact" in scored and "low_eye_contact" in passed and body.eye_contact_ratio:
+            out.append((3.1, f"Strong eye contact ({body.eye_contact_ratio:.0%} of the time)."))
+        if "posture" in scored and {"slouching", "head_down"} <= passed:
+            out.append((2.4, "Upright, steady posture."))
+        if "body_language" in scored:
+            if "closed_gestures" in passed and "few_gestures" in passed:
+                out.append((2.2, "Open, natural hand gestures."))
+            if (body.smile_ratio or 0) >= 0.15:
+                out.append(
+                    (2.0, f"Friendly expression (smiling {body.smile_ratio:.0%} of the time).")
+                )
+            if {"fidgeting", "swaying", "face_touching"} <= passed and body.hands_visible_ratio:
+                out.append((1.6, "Calm body with little fidgeting."))
     out.sort(key=lambda x: -x[0])
     return [text for _, text in out[:3]]
 
@@ -243,6 +352,7 @@ def build(
     pacing: PacingMetrics | None,
     voice: VoiceMetrics | None,
     language: LanguageMetrics | None,
+    body: BodyMetrics | None = None,
 ) -> Report:
     penalised = sorted(
         ((cat, r) for cat, c in scores.categories.items() for r in c.rules if r.penalty > 0),
@@ -312,7 +422,7 @@ def build(
     return Report(
         overall=scores.overall,
         scores=scores,
-        strengths=strengths(pacing, voice, language, scores),
+        strengths=strengths(pacing, voice, language, scores, body),
         gaps=gaps,
         top_fixes=top_fixes,
         sections=sections,

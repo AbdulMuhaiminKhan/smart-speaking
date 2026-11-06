@@ -13,7 +13,13 @@ from typing import Any, Literal
 import yaml
 from pydantic import BaseModel
 
-from app.schemas.metrics import Category, LanguageMetrics, PacingMetrics, VoiceMetrics
+from app.schemas.metrics import (
+    BodyMetrics,
+    Category,
+    LanguageMetrics,
+    PacingMetrics,
+    VoiceMetrics,
+)
 
 RULES_PATH = Path(__file__).parent / "scoring_rules.yaml"
 ALL_CATEGORIES: tuple[Category, ...] = (
@@ -88,10 +94,15 @@ def load_rules(path: Path = RULES_PATH) -> RuleSet:
     return rules
 
 
+MIN_HANDS_FOR_GESTURES = 0.3  # gesture rules need hands in view at least this often
+
+
 def derived_metrics(
     pacing: PacingMetrics | None,
     voice: VoiceMetrics | None,
     language: LanguageMetrics | None,
+    body: BodyMetrics | None = None,
+    duration_s: float | None = None,
 ) -> dict[str, float | None]:
     """Flat metric values the rules refer to by name."""
     m: dict[str, float | None] = {}
@@ -136,6 +147,33 @@ def derived_metrics(
             ),
             script_coverage=language.script.coverage if language.script else None,
         )
+    if body is not None:
+        minutes = max((duration_s or 60.0) / 60, 1e-6)
+        hands_ok = (body.hands_visible_ratio or 0) >= MIN_HANDS_FOR_GESTURES
+        m.update(
+            eye_contact_ratio=body.eye_contact_ratio,
+            look_aways_per_min=(
+                sum(s.kind == "looking_away" for s in body.segments) / minutes
+                if body.eye_contact_ratio is not None
+                else None
+            ),
+            slouch_ratio=body.slouch_ratio,
+            head_down_ratio=body.head_down_ratio,
+            tilt_ratio=body.tilt_ratio,
+            lean_ratio=body.lean_ratio,
+            hands_visible_ratio=body.hands_visible_ratio,
+            gestures_per_min_visible=(
+                body.gestures_per_min / (body.hands_visible_ratio or 1)
+                if hands_ok and body.gestures_per_min is not None
+                else None
+            ),
+            open_gesture_ratio_visible=body.open_gesture_ratio if hands_ok else None,
+            arms_crossed_ratio=body.arms_crossed_ratio,
+            fidget_ratio=body.fidget_ratio if hands_ok else None,
+            face_touches_per_min=body.face_touch_count / minutes,
+            sway_ratio=body.sway_ratio,
+            tense_ratio=body.tense_ratio,
+        )
     return m
 
 
@@ -163,18 +201,51 @@ def score_category(
     )
 
 
+def body_not_scored(body: BodyMetrics | None, has_video: bool) -> dict[str, str]:
+    """Reasons to skip the visual categories, so bad input never yields a fake score."""
+    if not has_video:
+        reason = "No video track, so this could not be measured."
+        return {"eye_contact": reason, "posture": reason, "body_language": reason}
+    if body is None:
+        reason = "Body tracking failed for this video."
+        return {"eye_contact": reason, "posture": reason, "body_language": reason}
+    out: dict[str, str] = {}
+    if body.face_detected_ratio < 0.3:
+        out["eye_contact"] = (
+            f"Your face was visible in only {body.face_detected_ratio:.0%} of the video. "
+            "Face the camera with good lighting to get this score."
+        )
+    if body.pose_detected_ratio < 0.3:
+        reason = (
+            f"Your upper body was visible in only {body.pose_detected_ratio:.0%} of the video. "
+            "Sit or stand so your shoulders are in frame."
+        )
+        out["posture"] = reason
+        out["body_language"] = reason
+    return out
+
+
 def score(
     *,
     pacing: PacingMetrics | None,
     voice: VoiceMetrics | None,
     language: LanguageMetrics | None,
+    body: BodyMetrics | None = None,
+    duration_s: float | None = None,
     not_scored: dict[str, str] | None = None,
     rules: RuleSet | None = None,
 ) -> Scores:
     """Score every category. Categories without data are marked not_scored with a reason."""
     rules = rules or load_rules()
-    metrics = derived_metrics(pacing, voice, language)
-    available = {"pacing": pacing, "voice": voice, "language": language}
+    metrics = derived_metrics(pacing, voice, language, body, duration_s)
+    available: dict[str, object] = {
+        "pacing": pacing,
+        "voice": voice,
+        "language": language,
+        "eye_contact": body,
+        "posture": body,
+        "body_language": body,
+    }
     reasons = dict(not_scored or {})
 
     out: dict[str, CategoryScore] = {}

@@ -13,3 +13,4 @@ backend/data/
 # Node
 node_modules/
 frontend/dist/
+frontend/public/mediapipe/

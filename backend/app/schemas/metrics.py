@@ -112,3 +112,46 @@ class LanguageMetrics(BaseModel):
     avg_sentence_words: float
     long_sentences: list[Occurrence]  # phrase holds the first words of the sentence
     script: ScriptComparison | None
+
+
+# ---- Body language ----------------------------------------------------------
+
+
+class Segment(BaseModel):
+    # looking_away, head_down, slouch, arms_crossed, hands_hidden, face_touch, fidget, sway, tense
+    kind: str
+    start: float
+    end: float
+
+
+class BodyMetrics(BaseModel):
+    sample_fps: float
+    frames_analyzed: int
+    face_detected_ratio: float
+    pose_detected_ratio: float
+    too_dark_ratio: float  # frames under the brightness threshold
+
+    # Eye contact (only frames with a face)
+    eye_contact_ratio: float | None
+    eye_contact_series: list[TimePoint]  # share of frames with eye contact per 5 s
+
+    # Posture (only frames with shoulders visible)
+    slouch_ratio: float | None
+    head_down_ratio: float | None
+    shoulder_tilt_deg: float | None  # median absolute tilt
+    tilt_ratio: float | None
+    lean_ratio: float | None
+
+    # Body language
+    hands_visible_ratio: float | None
+    gestures_per_min: float | None
+    open_gesture_ratio: float | None  # of frames with visible hands, open palms
+    arms_crossed_ratio: float | None
+    face_touch_count: int
+    fidget_ratio: float | None
+    sway_ratio: float | None
+    smile_ratio: float | None
+    tense_ratio: float | None
+    neutral_ratio: float | None
+
+    segments: list[Segment]

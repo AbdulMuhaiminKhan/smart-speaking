@@ -3,10 +3,16 @@ import { useNavigate } from 'react-router-dom'
 import { ApiError, uploadSession } from '../api/client'
 import { ProgressBar } from '../components/ProgressBar'
 import { LiveAudioStream, type LiveStats } from '../live/audioStream'
+import type { Baseline } from '../live/bodyRules'
+import { drawFrame, type FrameChecks } from '../live/overlay'
+import { BodyTracker } from '../live/tracker'
 import { extensionFor, Recording } from '../live/recorder'
 import { formatTime } from '../lib/format'
 
 type Phase = 'idle' | 'starting' | 'recording' | 'uploading'
+
+const CALIBRATION_S = 3
+const EYE_WINDOW = 150 // frames in the rolling eye-contact window (about 10 s)
 
 function wpmTone(wpm: number | null): string {
   if (wpm === null) return 'text-slate-400'
@@ -28,6 +34,19 @@ export function LivePage() {
   const audioRef = useRef<LiveAudioStream | null>(null)
   const recRef = useRef<Recording | null>(null)
   const startedAt = useRef(0)
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const trackerRef = useRef<BodyTracker | null>(null)
+  const loopRef = useRef<number | null>(null)
+  const baselineRef = useRef<Baseline | null>(null)
+  const calib = useRef<{ yaw: number[]; pitch: number[]; down: number[] }>({ yaw: [], pitch: [], down: [] })
+  const eyeHistory = useRef<boolean[]>([])
+  const eyeTotals = useRef({ yes: 0, all: 0 })
+  const [checks, setChecks] = useState<FrameChecks | null>(null)
+  const [eyeRecent, setEyeRecent] = useState<number | null>(null)
+  const [calibrating, setCalibrating] = useState(false)
+  const [overlayOn, setOverlayOn] = useState(true)
+  const overlayOnRef = useRef(true)
+  const [trackerNote, setTrackerNote] = useState<string | null>(null)
   const [phase, setPhase] = useState<Phase>('idle')
   const [stats, setStats] = useState<LiveStats | null>(null)
   const [elapsed, setElapsed] = useState(0)
@@ -37,8 +56,94 @@ export function LivePage() {
   const [error, setError] = useState<string | null>(null)
   const [uploadProgress, setUploadProgress] = useState(0)
 
-  // Release the camera when leaving the page.
-  useEffect(() => () => streamRef.current?.getTracks().forEach((t) => t.stop()), [])
+  // Release the camera and models when leaving the page.
+  useEffect(
+    () => () => {
+      streamRef.current?.getTracks().forEach((t) => t.stop())
+      if (loopRef.current) cancelAnimationFrame(loopRef.current)
+      trackerRef.current?.close()
+    },
+    [],
+  )
+
+  useEffect(() => {
+    overlayOnRef.current = overlayOn
+    if (!overlayOn) {
+      const c = canvasRef.current
+      c?.getContext('2d')?.clearRect(0, 0, c.width, c.height)
+    }
+  }, [overlayOn])
+
+  function median(xs: number[]): number {
+    const s = [...xs].sort((a, b) => a - b)
+    return s.length ? s[Math.floor(s.length / 2)] : 0
+  }
+
+  function startTracking() {
+    const video = videoRef.current
+    const canvas = canvasRef.current
+    const tracker = trackerRef.current
+    if (!video || !canvas || !tracker) return
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+    baselineRef.current = null
+    calib.current = { yaw: [], pitch: [], down: [] }
+    eyeHistory.current = []
+    eyeTotals.current = { yes: 0, all: 0 }
+    setCalibrating(true)
+    const t0 = performance.now()
+    let lastVideoTime = -1
+    let lastUi = 0
+
+    const tick = () => {
+      loopRef.current = requestAnimationFrame(tick)
+      if (video.readyState < 2 || video.currentTime === lastVideoTime) return
+      lastVideoTime = video.currentTime
+      if (canvas.width !== video.videoWidth) {
+        canvas.width = video.videoWidth
+        canvas.height = video.videoHeight
+      }
+      const now = performance.now()
+      let result
+      try {
+        result = tracker.detect(video, now)
+      } catch {
+        return
+      }
+      const aspect = video.videoWidth / Math.max(1, video.videoHeight)
+      // Checks always run; the drawing is wiped when the overlay is switched off.
+      const frame = drawFrame(ctx, result, aspect, baselineRef.current)
+      if (!overlayOnRef.current) ctx.clearRect(0, 0, canvas.width, canvas.height)
+
+      // Calibration: assume the speaker looks at the camera for the first seconds.
+      if (!baselineRef.current && frame.face) {
+        calib.current.yaw.push(frame.face.yaw)
+        calib.current.pitch.push(frame.face.pitch)
+        calib.current.down.push(frame.face.down)
+        if ((now - t0) / 1000 >= CALIBRATION_S) {
+          baselineRef.current = {
+            yaw: median(calib.current.yaw),
+            pitch: median(calib.current.pitch),
+            down: median(calib.current.down),
+          }
+          setCalibrating(false)
+        }
+      } else if (baselineRef.current) {
+        const eye = frame.face?.eyeContact ?? false
+        eyeHistory.current.push(eye)
+        if (eyeHistory.current.length > EYE_WINDOW) eyeHistory.current.shift()
+        eyeTotals.current.all++
+        if (eye) eyeTotals.current.yes++
+      }
+      if (now - lastUi > 250) {
+        lastUi = now
+        setChecks(frame)
+        const h = eyeHistory.current
+        setEyeRecent(h.length >= 10 ? h.filter(Boolean).length / h.length : null)
+      }
+    }
+    loopRef.current = requestAnimationFrame(tick)
+  }
 
   useEffect(() => {
     if (phase !== 'recording') return
@@ -68,6 +173,13 @@ export function LivePage() {
         videoRef.current.srcObject = stream
         await videoRef.current.play().catch(() => undefined)
       }
+      setTrackerNote(null)
+      const trackerReady = (trackerRef.current ? Promise.resolve(trackerRef.current) : BodyTracker.create())
+        .then((t) => {
+          trackerRef.current = t
+          startTracking()
+        })
+        .catch(() => setTrackerNote('Body tracking could not start in this browser. Audio feedback still works.'))
       const audio = new LiveAudioStream({ onStats: setStats, onError: setNotice })
       audioRef.current = audio
       await audio
@@ -79,6 +191,7 @@ export function LivePage() {
       startedAt.current = Date.now()
       setElapsed(0)
       setPhase('recording')
+      void trackerReady
     } catch (e) {
       const name = e instanceof DOMException ? e.name : ''
       setError(
@@ -99,6 +212,9 @@ export function LivePage() {
     const rec = recRef.current
     const blob = rec ? await rec.stop() : null
     await audioRef.current?.stop()
+    if (loopRef.current) cancelAnimationFrame(loopRef.current)
+    loopRef.current = null
+    canvasRef.current?.getContext('2d')?.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height)
     streamRef.current?.getTracks().forEach((t) => t.stop())
     if (videoRef.current) videoRef.current.srcObject = null
     if (!blob || blob.size === 0 || !rec) {
@@ -139,6 +255,12 @@ export function LivePage() {
       <div className="grid gap-6 lg:grid-cols-[1fr_18rem]">
         <div className="relative overflow-hidden rounded-xl bg-slate-900">
           <video ref={videoRef} muted playsInline className="aspect-video w-full -scale-x-100 object-cover" />
+          <canvas ref={canvasRef} className="pointer-events-none absolute inset-0 h-full w-full object-cover" />
+          {phase === 'recording' && calibrating && (
+            <div className="absolute inset-x-0 bottom-4 mx-auto w-fit rounded-full bg-black/70 px-4 py-2 text-sm text-white">
+              Look at the camera for a moment…
+            </div>
+          )}
           {phase === 'idle' && (
             <div className="absolute inset-0 grid place-items-center text-slate-300">Camera is off</div>
           )}
@@ -169,6 +291,28 @@ export function LivePage() {
                 : 'None yet'}
             </p>
           </div>
+          <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+            <p className="text-xs uppercase tracking-wide text-slate-500">Eye contact</p>
+            <p className={`text-4xl font-semibold tabular-nums ${eyeRecent === null ? 'text-slate-400' : eyeRecent >= 0.75 ? 'text-emerald-500' : 'text-amber-500'}`}>
+              {eyeRecent === null ? '–' : `${Math.round(eyeRecent * 100)}%`}
+            </p>
+            <p className="text-sm text-slate-500">
+              {calibrating ? 'Calibrating…' : checks?.face ? checks.face.label : phase === 'recording' ? 'No face in view' : 'last 10 seconds'}
+            </p>
+          </div>
+          <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+            <p className="text-xs uppercase tracking-wide text-slate-500">Posture</p>
+            <p className={`text-lg font-semibold ${!checks?.posture ? 'text-slate-400' : checks.posture.ok ? 'text-emerald-500' : 'text-red-500'}`}>
+              {checks?.posture ? checks.posture.label : phase === 'recording' ? 'Shoulders not in view' : '–'}
+            </p>
+            <p className="text-sm text-slate-500">
+              {checks ? `${checks.handsVisible} hand${checks.handsVisible === 1 ? '' : 's'} visible` : ''}
+            </p>
+          </div>
+          <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
+            <input type="checkbox" checked={overlayOn} onChange={(e) => setOverlayOn(e.target.checked)} />
+            Show tracking boxes
+          </label>
           <div className="rounded-xl border border-slate-200 bg-white p-4 text-sm dark:border-slate-800 dark:bg-slate-900">
             <p className="text-xs uppercase tracking-wide text-slate-500">Last heard</p>
             <p className="mt-1 min-h-10 text-slate-700 dark:text-slate-300">{stats?.last_text || '…'}</p>
@@ -224,6 +368,7 @@ export function LivePage() {
       )}
       {phase === 'uploading' && <ProgressBar value={uploadProgress} label="Saving your recording" />}
 
+      {trackerNote && <p className="rounded-md bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-200">{trackerNote}</p>}
       {notice && <p className="rounded-md bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-200">{notice}</p>}
       {error && (
         <p role="alert" className="rounded-md bg-red-50 px-4 py-3 text-sm text-red-800 dark:bg-red-950 dark:text-red-200">
