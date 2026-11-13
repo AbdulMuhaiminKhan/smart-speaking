@@ -16,3 +16,14 @@ html {
 body {
   @apply bg-slate-50 text-slate-900 antialiased dark:bg-slate-950 dark:text-slate-100;
 }
+
+/* Urdu: Nastaliq script needs a font that has it (macOS and most Linux desktops ship
+   Noto Nastaliq Urdu) and more line height for its tall letters. Nothing is downloaded. */
+:lang(ur) {
+  font-family: "Noto Nastaliq Urdu", "Jameel Noori Nastaleeq", "Urdu Typesetting", "Noto Naskh Arabic", var(--font-sans);
+  line-height: 1.9;
+}
+:lang(ur) .font-mono,
+:lang(ur) .tabular-nums {
+  font-family: var(--font-sans);
+}

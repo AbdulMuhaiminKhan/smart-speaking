@@ -50,7 +50,7 @@ export class LiveAudioStream {
       else if (msg.type === 'ready') this.handlers.onReady?.()
       else if (msg.type === 'error') this.handlers.onError(msg.message)
     }
-    this.ws.onerror = () => this.handlers.onError('Live feedback is unavailable. Recording still works.')
+    this.ws.onerror = () => this.handlers.onError('unavailable')
 
     this.ctx = ctx
     // Browsers start an AudioContext paused unless a click allowed it; resume to be sure.

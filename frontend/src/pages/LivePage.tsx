@@ -1,12 +1,16 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ApiError, uploadSession } from '../api/client'
+import { uploadSession, type Lang } from '../api/client'
+import { useAuth } from '../auth/AuthContext'
 import { ProgressBar } from '../components/ProgressBar'
 import { LiveAudioStream, type LiveStats } from '../live/audioStream'
 import type { Baseline } from '../live/bodyRules'
-import { drawFrame, EMOTION_LABELS, type FrameChecks } from '../live/overlay'
+import { drawFrame, type FrameChecks } from '../live/overlay'
 import { BodyTracker } from '../live/tracker'
 import { extensionFor, Recording } from '../live/recorder'
+import { useI18n } from '../i18n'
+import { LANGS, type MessageKey } from '../i18n/core'
+import { errorText } from '../lib/errors'
 import { formatTime } from '../lib/format'
 
 type Phase = 'idle' | 'starting' | 'recording' | 'uploading'
@@ -20,15 +24,20 @@ function wpmTone(wpm: number | null): string {
   return 'text-emerald-500'
 }
 
-function wpmHint(wpm: number | null): string {
-  if (wpm === null) return 'Start speaking'
-  if (wpm > 170) return 'Slow down a little'
-  if (wpm < 110) return 'You can speed up'
-  return 'Good pace'
+function wpmHint(wpm: number | null): MessageKey {
+  if (wpm === null) return 'live.pace_start'
+  if (wpm > 170) return 'live.pace_fast'
+  if (wpm < 110) return 'live.pace_slow'
+  return 'live.pace_good'
 }
 
 export function LivePage() {
   const navigate = useNavigate()
+  const { t, lang } = useI18n()
+  const { user } = useAuth()
+  const tRef = useRef(t)
+  tRef.current = t
+  const [speechLang, setSpeechLang] = useState<Lang>(user?.settings.language ?? lang)
   const videoRef = useRef<HTMLVideoElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
   const audioRef = useRef<LiveAudioStream | null>(null)
@@ -116,7 +125,7 @@ export function LivePage() {
       }
       const aspect = video.videoWidth / Math.max(1, video.videoHeight)
       // Checks always run; the drawing is wiped when the overlay is switched off.
-      const frame = drawFrame(ctx, result, aspect, baselineRef.current)
+      const frame = drawFrame(ctx, result, aspect, baselineRef.current, tRef.current)
       if (!overlayOnRef.current) ctx.clearRect(0, 0, canvas.width, canvas.height)
 
       // Calibration: assume the speaker looks at the camera for the first seconds.
@@ -195,12 +204,13 @@ export function LivePage() {
           trackerRef.current = t
           startTracking()
         })
-        .catch(() => setTrackerNote('Body tracking could not start in this browser. Audio feedback still works.'))
-      const audio = new LiveAudioStream({ onStats: setStats, onError: setNotice })
+        .catch(() => setTrackerNote(t('live.tracker_failed')))
+      const audio = new LiveAudioStream({
+        onStats: setStats,
+        onError: (m) => setNotice(m === 'unavailable' ? t('live.feedback_unavailable') : t('live.model_failed')),
+      })
       audioRef.current = audio
-      await audio
-        .start(stream, audioCtx)
-        .catch(() => setNotice('Live feedback is unavailable. Recording still works.'))
+      await audio.start(stream, audioCtx, speechLang).catch(() => setNotice(t('live.feedback_unavailable')))
       const rec = new Recording(stream)
       recRef.current = rec
       rec.start()
@@ -212,10 +222,10 @@ export function LivePage() {
       const name = e instanceof DOMException ? e.name : ''
       setError(
         name === 'NotAllowedError'
-          ? 'Camera or microphone access was blocked. Allow it in your browser settings and try again.'
+          ? t('live.blocked')
           : name === 'NotFoundError'
-            ? 'No camera or microphone was found.'
-            : 'Could not start the camera and microphone.',
+            ? t('live.no_device')
+            : t('live.start_failed'),
       )
       void audioCtx.close()
       setPhase('idle')
@@ -234,12 +244,12 @@ export function LivePage() {
     streamRef.current?.getTracks().forEach((t) => t.stop())
     if (videoRef.current) videoRef.current.srcObject = null
     if (!blob || blob.size === 0 || !rec) {
-      setError('Nothing was recorded.')
+      setError(t('live.nothing_recorded'))
       setPhase('idle')
       return
     }
     try {
-      const name = title.trim() || `Live practice ${new Date().toLocaleString()}`
+      const name = title.trim() || t('live.default_title', { date: new Date().toLocaleString() })
       const session = await uploadSession({
         file: blob,
         filename: `live${extensionFor(rec.mimeType)}`,
@@ -247,11 +257,12 @@ export function LivePage() {
         source: 'live',
         mode: target ? 'timed_pitch' : 'free_talk',
         targetSeconds: target ?? undefined,
+        language: speechLang,
         onProgress: setUploadProgress,
       })
       navigate(`/sessions/${session.id}`)
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : 'Upload failed.')
+      setError(errorText(e, t, 'err.upload_failed'))
       setPhase('idle')
     }
   }
@@ -262,31 +273,29 @@ export function LivePage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold">Live practice</h1>
-        <p className="mt-1 text-slate-600 dark:text-slate-400">
-          Speak to your camera. You get live hints now and a full report when you stop.
-        </p>
+        <h1 className="text-2xl font-semibold">{t('live.title')}</h1>
+        <p className="mt-1 text-slate-600 dark:text-slate-400">{t('live.subtitle')}</p>
       </div>
 
       <div className="grid items-start gap-6 lg:grid-cols-[1fr_18rem]">
         {/* Fixed 16:9 box: video and overlay share exactly the same area and cropping,
             so the boxes stay on the body even when the side panel is taller. */}
         <div className="space-y-4">
-          <div className="relative aspect-video overflow-hidden rounded-xl bg-slate-900">
+          <div dir="ltr" className="relative aspect-video overflow-hidden rounded-xl bg-slate-900">
             <video ref={videoRef} muted playsInline className="absolute inset-0 h-full w-full -scale-x-100 object-cover" />
             <canvas ref={canvasRef} className="pointer-events-none absolute inset-0 h-full w-full object-cover" />
             {phase === 'recording' && calibrating && (
               <div className="absolute inset-x-0 bottom-4 mx-auto w-fit rounded-full bg-black/70 px-4 py-2 text-sm text-white">
-                Look at the camera for a moment…
+                {t('live.look_at_camera')}
               </div>
             )}
             {phase === 'idle' && (
-              <div className="absolute inset-0 grid place-items-center text-slate-300">Camera is off</div>
+              <div className="absolute inset-0 grid place-items-center text-slate-300">{t('live.camera_off')}</div>
             )}
             {phase === 'recording' && (
               <div className="absolute left-3 top-3 flex items-center gap-2 rounded-full bg-black/60 px-3 py-1 text-sm text-white">
                 <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-red-500" />
-                {remaining !== null ? `${formatTime(remaining)} left` : formatTime(elapsed)}
+                {remaining !== null ? t('live.left', { time: formatTime(remaining) }) : formatTime(elapsed)}
               </div>
             )}
           </div>
@@ -294,7 +303,7 @@ export function LivePage() {
         {phase === 'idle' && (
           <div className="flex flex-wrap items-end gap-4 rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
             <label className="min-w-56 flex-1">
-              <span className="text-sm font-medium">Title (optional)</span>
+              <span className="text-sm font-medium">{t('live.title_optional')}</span>
               <input
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
@@ -302,7 +311,7 @@ export function LivePage() {
               />
             </label>
             <div>
-              <span className="text-sm font-medium">Length</span>
+              <span className="text-sm font-medium">{t('live.length')}</span>
               <div className="mt-1 flex gap-2">
                 {[null, 60, 180, 300].map((s) => (
                   <button
@@ -313,40 +322,54 @@ export function LivePage() {
                       target === s ? 'border-brand-600 bg-brand-50 dark:bg-slate-800' : 'border-slate-300 dark:border-slate-700'
                     }`}
                   >
-                    {s === null ? 'Free talk' : `${s / 60} min pitch`}
+                    {s === null ? t('mode.free_talk') : t('mode.min_pitch', { n: s / 60 })}
                   </button>
                 ))}
               </div>
             </div>
+            <label>
+              <span className="text-sm font-medium">{t('live.speech_language')}</span>
+              <select
+                value={speechLang}
+                onChange={(e) => setSpeechLang(e.target.value as Lang)}
+                className="mt-1 block rounded-md border border-slate-300 bg-transparent px-3 py-2 dark:border-slate-700"
+              >
+                {LANGS.map((l) => (
+                  <option key={l} value={l} lang={l}>
+                    {t(`lang.${l}`)}
+                  </option>
+                ))}
+              </select>
+            </label>
             <button
               type="button"
               onClick={() => void start()}
               className="rounded-md bg-brand-600 px-5 py-2.5 font-medium text-white hover:bg-brand-700"
             >
-              Start recording
+              {t('live.start')}
             </button>
           </div>
         )}
-        {phase === 'starting' && <p className="text-slate-500">Starting camera and microphone…</p>}
+        {phase === 'starting' && <p className="text-slate-500">{t('live.starting')}</p>}
         {phase === 'recording' && (
           <button
             type="button"
             onClick={() => void stop()}
             className="rounded-md bg-red-600 px-5 py-2.5 font-medium text-white hover:bg-red-700"
           >
-            Stop and analyze
+            {t('live.stop')}
           </button>
         )}
-        {phase === 'uploading' && <ProgressBar value={uploadProgress} label="Saving your recording" />}
+        {phase === 'uploading' && <ProgressBar value={uploadProgress} label={t('live.saving')} />}
         </div>
         <aside className="space-y-4">
           <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
-            <p className="text-xs uppercase tracking-wide text-slate-500">Pace</p>
+            <p className="text-xs uppercase tracking-wide text-slate-500">{t('live.pace')}</p>
             <p className={`text-4xl font-semibold tabular-nums ${wpmTone(wpm)}`}>{wpm ?? '–'}</p>
-            <p className="text-sm text-slate-500">words per minute · {wpmHint(wpm)}</p>
+            <p className="text-sm text-slate-500">{t('common.wpm')} · {t(wpmHint(wpm))}</p>
           </div>
           <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
-            <p className="text-xs uppercase tracking-wide text-slate-500">Filler words</p>
+            <p className="text-xs uppercase tracking-wide text-slate-500">{t('live.fillers')}</p>
             <p className={`text-4xl font-semibold tabular-nums ${(stats?.fillers ?? 0) > 5 ? 'text-amber-500' : ''}`}>
               {stats?.fillers ?? 0}
             </p>
@@ -355,41 +378,43 @@ export function LivePage() {
                 ? Object.entries(stats.filler_counts)
                     .map(([k, v]) => `${k} ×${v}`)
                     .join(', ')
-                : 'None yet'}
+                : t('common.none_yet')}
             </p>
           </div>
           <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
-            <p className="text-xs uppercase tracking-wide text-slate-500">Eye contact</p>
+            <p className="text-xs uppercase tracking-wide text-slate-500">{t('live.eye_contact')}</p>
             <p className={`text-4xl font-semibold tabular-nums ${eyeRecent === null ? 'text-slate-400' : eyeRecent >= 0.75 ? 'text-emerald-500' : 'text-amber-500'}`}>
               {eyeRecent === null ? '–' : `${Math.round(eyeRecent * 100)}%`}
             </p>
             <p className="text-sm text-slate-500">
-              {calibrating ? 'Calibrating…' : checks?.face ? checks.face.label : phase === 'recording' ? 'No face in view' : 'last 10 seconds'}
+              {calibrating ? t('live.calibrating') : checks?.face ? t(checks.face.labelKey) : phase === 'recording' ? t('live.no_face') : t('live.last_10s')}
             </p>
           </div>
           <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
-            <p className="text-xs uppercase tracking-wide text-slate-500">Posture</p>
+            <p className="text-xs uppercase tracking-wide text-slate-500">{t('live.posture')}</p>
             <p className={`text-lg font-semibold ${!checks?.posture ? 'text-slate-400' : checks.posture.ok ? 'text-emerald-500' : 'text-red-500'}`}>
-              {checks?.posture ? checks.posture.label : phase === 'recording' ? 'Shoulders not in view' : '–'}
+              {checks?.posture ? t(checks.posture.labelKey) : phase === 'recording' ? t('live.no_shoulders') : '–'}
             </p>
             <p className="text-sm text-slate-500">
-              {checks ? `${checks.handsVisible} hand${checks.handsVisible === 1 ? '' : 's'} visible` : ''}
+              {checks ? t('live.hands_visible', { n: checks.handsVisible }) : ''}
             </p>
           </div>
           <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
-            <p className="text-xs uppercase tracking-wide text-slate-500">Expression</p>
-            <p className="text-lg font-semibold">{checks?.face ? EMOTION_LABELS[checks.face.emotion] : '–'}</p>
+            <p className="text-xs uppercase tracking-wide text-slate-500">{t('live.expression')}</p>
+            <p className="text-lg font-semibold">{checks?.face ? t(`emotion.${checks.face.emotion}`) : '–'}</p>
             <p className="text-sm text-slate-500">
-              {emotionMix.length ? emotionMix.map(([k, v]) => `${EMOTION_LABELS[k]} ${Math.round(v * 100)}%`).join(' · ') : 'Estimated from your face'}
+              {emotionMix.length
+                ? emotionMix.map(([k, v]) => `${t(`emotion.${k as 'neutral'}`)} ${Math.round(v * 100)}%`).join(' · ')
+                : t('live.expression_hint')}
             </p>
           </div>
           <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
             <input type="checkbox" checked={overlayOn} onChange={(e) => setOverlayOn(e.target.checked)} />
-            Show tracking boxes
+            {t('live.show_boxes')}
           </label>
           <div className="rounded-xl border border-slate-200 bg-white p-4 text-sm dark:border-slate-800 dark:bg-slate-900">
-            <p className="text-xs uppercase tracking-wide text-slate-500">Last heard</p>
-            <p className="mt-1 min-h-10 text-slate-700 dark:text-slate-300">{stats?.last_text || '…'}</p>
+            <p className="text-xs uppercase tracking-wide text-slate-500">{t('live.last_heard')}</p>
+            <p dir="auto" className="mt-1 min-h-10 text-slate-700 dark:text-slate-300">{stats?.last_text || '…'}</p>
           </div>
         </aside>
       </div>

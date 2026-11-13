@@ -1,5 +1,6 @@
 import { BrowserRouter, Link, Route, Routes } from 'react-router-dom'
 import { AuthProvider, RequireAuth } from './auth/AuthContext'
+import { I18nProvider, useI18n } from './i18n'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { Layout } from './components/Layout'
 import { LoginPage, RegisterPage } from './pages/AuthPages'
@@ -11,11 +12,12 @@ import { SettingsPage } from './pages/SettingsPage'
 import { UploadPage } from './pages/UploadPage'
 
 function NotFound() {
+  const { t } = useI18n()
   return (
     <div className="py-16 text-center">
-      <p className="text-lg font-medium">Page not found</p>
+      <p className="text-lg font-medium">{t('notfound.title')}</p>
       <Link to="/" className="mt-2 inline-block text-brand-600">
-        Go to your dashboard
+        {t('notfound.link')}
       </Link>
     </div>
   )
@@ -23,6 +25,7 @@ function NotFound() {
 
 export default function App() {
   return (
+    <I18nProvider>
     <ErrorBoundary>
       <BrowserRouter>
         <AuthProvider>
@@ -48,5 +51,6 @@ export default function App() {
         </AuthProvider>
       </BrowserRouter>
     </ErrorBoundary>
+    </I18nProvider>
   )
 }

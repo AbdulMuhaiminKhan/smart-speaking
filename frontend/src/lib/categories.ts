@@ -1,15 +1,5 @@
 import type { Category } from '../api/client'
 
-export const CATEGORY_LABELS: Record<Category, string> = {
-  voice: 'Voice',
-  pacing: 'Pacing',
-  language: 'Language',
-  pronunciation: 'Pronunciation',
-  eye_contact: 'Eye contact',
-  posture: 'Posture',
-  body_language: 'Body language',
-}
-
 export function scoreColor(score: number | null): string {
   if (score === null) return 'text-slate-400'
   if (score >= 80) return 'text-emerald-600 dark:text-emerald-400'

@@ -10,7 +10,7 @@ export interface PracticeSession {
   source: 'upload' | 'live'
   mode: SessionMode
   target_seconds: number | null
-  language: string
+  language: Lang
   model_preset: ModelPreset
   original_filename: string
   size_bytes: number
@@ -183,10 +183,12 @@ export interface Issue {
   severity: 'info' | 'minor' | 'major'
   message: string
   text: string | null
+  value?: number | null
 }
 
 export interface Report {
   generated_by: 'template' | 'llm'
+  language?: Lang
   llm_model: string | null
   llm_error: string | null
   summary: string | null
@@ -259,8 +261,11 @@ export const reportApi = {
 
 // ---- Accounts and progress (Phase 6) ----
 
+export type Lang = 'en' | 'de' | 'ur'
+
 export interface UserSettings {
-  language: 'en'
+  language: Lang
+  ui_language: Lang
   model_preset: ModelPreset
   auto_delete_video: boolean
 }

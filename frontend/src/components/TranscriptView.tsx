@@ -1,4 +1,5 @@
 import type { Issue, PacingResult, Transcript } from '../api/client'
+import { useI18n } from '../i18n'
 import { formatTime } from '../lib/format'
 
 interface Props {
@@ -23,21 +24,23 @@ const PAUSE: Record<string, string> = {
 }
 
 export function TranscriptLegend() {
+  const { t } = useI18n()
   return (
     <div className="mb-3 flex flex-wrap gap-2 text-xs">
-      <span className={`rounded px-1.5 ${MARK.filler}`}>filler</span>
-      <span className={`rounded px-1.5 ${MARK.hedge}`}>hedge</span>
-      <span className={`rounded px-1.5 ${MARK.repetition}`}>repeat</span>
-      <span className={`rounded px-1.5 ${MARK.mispronounced}`}>may be unclear (estimate)</span>
-      <span className={PAUSE.effective}>‖ good pause</span>
-      <span className={PAUSE.hesitation}>‖ hesitation</span>
-      <span className={PAUSE.awkward}>‖ long silence</span>
-      <span className="underline decoration-amber-400 decoration-dotted underline-offset-4">unclear word</span>
+      <span className={`rounded px-1.5 ${MARK.filler}`}>{t('tr.filler')}</span>
+      <span className={`rounded px-1.5 ${MARK.hedge}`}>{t('tr.hedge')}</span>
+      <span className={`rounded px-1.5 ${MARK.repetition}`}>{t('tr.repeat')}</span>
+      <span className={`rounded px-1.5 ${MARK.mispronounced}`}>{t('tr.unclear_estimate')}</span>
+      <span className={PAUSE.effective}>{t('tr.good_pause')}</span>
+      <span className={PAUSE.hesitation}>{t('tr.hesitation')}</span>
+      <span className={PAUSE.awkward}>{t('tr.long_silence')}</span>
+      <span className="underline decoration-amber-400 decoration-dotted underline-offset-4">{t('tr.unclear_word')}</span>
     </div>
   )
 }
 
 export function TranscriptView({ transcript, currentTime, onSeek, issues = [], pauses = [] }: Props) {
+  const { t } = useI18n()
   const marks = issues.filter((i) => i.kind in MARK)
   const markFor = (start: number, end: number) =>
     marks.find((m) => start >= m.start - 0.01 && end <= m.end + 0.01)?.kind
@@ -54,7 +57,7 @@ export function TranscriptView({ transcript, currentTime, onSeek, issues = [], p
           >
             {formatTime(seg.start)}
           </button>
-          <p className="leading-relaxed">
+          <p dir="auto" className="leading-relaxed">
             {seg.words.map((w, i) => {
               const active = currentTime >= w.start && currentTime < w.end
               const unsure = w.probability < 0.5
@@ -65,7 +68,7 @@ export function TranscriptView({ transcript, currentTime, onSeek, issues = [], p
                   <button
                     type="button"
                     onClick={() => onSeek(w.start)}
-                    title={`${formatTime(w.start)} · confidence ${(w.probability * 100).toFixed(0)}%`}
+                    title={`${formatTime(w.start)} · ${t('tr.confidence', { n: (w.probability * 100).toFixed(0) })}`}
                     className={`rounded px-0.5 transition ${kind ? MARK[kind] : ''} ${
                       active ? 'ring-2 ring-brand-500' : ''
                     } ${unsure ? 'underline decoration-amber-400 decoration-dotted underline-offset-4' : ''} hover:bg-slate-100 dark:hover:bg-slate-800`}
@@ -73,7 +76,7 @@ export function TranscriptView({ transcript, currentTime, onSeek, issues = [], p
                     {w.text}
                   </button>
                   {pause && (
-                    <span className={`mx-0.5 font-semibold ${PAUSE[pause.kind]}`} title={`${pause.duration.toFixed(1)} s pause`}>
+                    <span className={`mx-0.5 font-semibold ${PAUSE[pause.kind]}`} title={t('tr.pause', { n: pause.duration.toFixed(1) })}>
                       ‖
                     </span>
                   )}{' '}

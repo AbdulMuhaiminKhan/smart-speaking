@@ -10,14 +10,3 @@ export function formatBytes(bytes: number): string {
   return `${(bytes / 1024 ** 3).toFixed(2)} GB`
 }
 
-export const STAGE_LABELS: Record<string, string> = {
-  preprocess: 'Reading the video and extracting audio',
-  transcribe: 'Transcribing your speech',
-  language: 'Checking pace, pauses and word choice',
-  voice: 'Analyzing pitch, volume and tone',
-  pronunciation: 'Checking pronunciation',
-  emotion: 'Listening for emotion in your voice',
-  body: 'Tracking eye contact, posture and gestures',
-  report: 'Scoring your talk',
-  coaching: 'Your local AI coach is writing feedback',
-}

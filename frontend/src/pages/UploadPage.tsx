@@ -1,20 +1,21 @@
 import { useRef, useState, type DragEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ApiError, uploadSession, type ModelPreset, type SessionMode } from '../api/client'
+import { uploadSession, type Lang, type ModelPreset, type SessionMode } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
 import { ProgressBar } from '../components/ProgressBar'
+import { useI18n } from '../i18n'
+import { LANGS, type MessageKey } from '../i18n/core'
+import { errorText } from '../lib/errors'
 import { formatBytes, formatTime } from '../lib/format'
-import { checkDuration, checkExtension, checkSize, readDuration } from '../lib/validateFile'
+import { checkDuration, checkExtension, checkSize, MIN_SECONDS, readDuration } from '../lib/validateFile'
 
-const PRESETS: { value: ModelPreset; label: string; hint: string }[] = [
-  { value: 'fast', label: 'Fast', hint: 'Quickest, a little less accurate' },
-  { value: 'balanced', label: 'Balanced', hint: 'Recommended' },
-  { value: 'accurate', label: 'Accurate', hint: 'Best transcript, slowest' },
-]
+const PRESETS: ModelPreset[] = ['fast', 'balanced', 'accurate']
 
 export function UploadPage() {
   const navigate = useNavigate()
   const { user } = useAuth()
+  const { t } = useI18n()
+  const [speechLang, setSpeechLang] = useState<Lang>(user?.settings.language ?? 'en')
   const inputRef = useRef<HTMLInputElement>(null)
   const abortRef = useRef<AbortController | null>(null)
   const [file, setFile] = useState<File | null>(null)
@@ -35,14 +36,14 @@ export function UploadPage() {
     const problem = checkExtension(f.name) ?? checkSize(f.size)
     if (problem) {
       setFile(null)
-      setError(problem)
+      setError(t(problem))
       return
     }
     const d = await readDuration(f)
-    const durationProblem = checkDuration(d)
+    const durationProblem: MessageKey | null = checkDuration(d)
     if (durationProblem) {
       setFile(null)
-      setError(durationProblem)
+      setError(t(durationProblem, { n: MIN_SECONDS }))
       return
     }
     setFile(f)
@@ -59,7 +60,7 @@ export function UploadPage() {
   async function submit() {
     if (!file) return
     if (mode === 'script' && !script.trim()) {
-      setError('Paste your script, or choose another practice mode.')
+      setError(t('upload.err_script'))
       return
     }
     setUploading(true)
@@ -75,22 +76,21 @@ export function UploadPage() {
         targetSeconds: mode === 'timed_pitch' ? target : undefined,
         scriptText: mode === 'script' ? script : undefined,
         modelPreset: preset,
+        language: speechLang,
         onProgress: setProgress,
         signal: abortRef.current.signal,
       })
       navigate(`/sessions/${session.id}`)
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : 'Upload failed.')
+      setError(errorText(e, t, 'err.upload_failed'))
       setUploading(false)
     }
   }
 
   return (
     <div className="mx-auto max-w-2xl">
-      <h1 className="text-2xl font-semibold">Analyze a recording</h1>
-      <p className="mt-1 text-slate-600 dark:text-slate-400">
-        Upload a video of your talk, pitch or presentation (mp4, webm or mov, up to 15 minutes).
-      </p>
+      <h1 className="text-2xl font-semibold">{t('upload.title')}</h1>
+      <p className="mt-1 text-slate-600 dark:text-slate-400">{t('upload.subtitle')}</p>
 
       <div
         onDragOver={(e) => {
@@ -118,13 +118,13 @@ export function UploadPage() {
             <p className="font-medium">{file.name}</p>
             <p className="mt-1 text-sm text-slate-500">
               {formatBytes(file.size)}
-              {duration !== null && ` · ${formatTime(duration)}`} · click to change
+              {duration !== null && ` · ${formatTime(duration)}`} · {t('upload.click_change')}
             </p>
           </div>
         ) : (
           <div>
-            <p className="font-medium">Drop a video here, or click to choose one</p>
-            <p className="mt-1 text-sm text-slate-500">It stays on this computer.</p>
+            <p className="font-medium">{t('upload.drop')}</p>
+            <p className="mt-1 text-sm text-slate-500">{t('upload.stays')}</p>
           </div>
         )}
       </div>
@@ -132,7 +132,7 @@ export function UploadPage() {
       {file && (
         <div className="mt-6 space-y-5 rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
           <label className="block">
-            <span className="text-sm font-medium">Title</span>
+            <span className="text-sm font-medium">{t('upload.field_title')}</span>
             <input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
@@ -142,15 +142,9 @@ export function UploadPage() {
           </label>
 
           <fieldset>
-            <legend className="text-sm font-medium">Practice mode</legend>
+            <legend className="text-sm font-medium">{t('upload.mode')}</legend>
             <div className="mt-2 flex flex-wrap gap-2">
-              {(
-                [
-                  ['free_talk', 'Free talk'],
-                  ['timed_pitch', 'Timed pitch'],
-                  ['script', 'Compare to my script'],
-                ] as const
-              ).map(([value, label]) => (
+              {(['free_talk', 'timed_pitch', 'script'] as const).map((value) => (
                 <button
                   key={value}
                   type="button"
@@ -161,7 +155,7 @@ export function UploadPage() {
                       : 'border-slate-300 dark:border-slate-700'
                   }`}
                 >
-                  {label}
+                  {t(`mode.${value}`)}
                 </button>
               ))}
             </div>
@@ -176,7 +170,7 @@ export function UploadPage() {
                       target === s ? 'border-brand-600 text-brand-700 dark:text-white' : 'border-slate-300 dark:border-slate-700'
                     }`}
                   >
-                    {s / 60} min
+                    {t('mode.minutes', { n: s / 60 })}
                   </button>
                 ))}
               </div>
@@ -186,42 +180,58 @@ export function UploadPage() {
                 value={script}
                 onChange={(e) => setScript(e.target.value)}
                 rows={6}
-                placeholder="Paste the script you meant to say"
+                placeholder={t('upload.script_placeholder')}
+                dir="auto"
                 className="mt-3 w-full rounded-md border border-slate-300 bg-transparent px-3 py-2 text-sm dark:border-slate-700"
               />
             )}
           </fieldset>
 
           <fieldset>
-            <legend className="text-sm font-medium">Analysis speed</legend>
+            <legend className="text-sm font-medium">{t('upload.speed')}</legend>
             <div className="mt-2 grid grid-cols-3 gap-2">
               {PRESETS.map((p) => (
                 <button
-                  key={p.value}
+                  key={p}
                   type="button"
-                  onClick={() => setPreset(p.value)}
-                  className={`rounded-md border px-3 py-2 text-left text-sm ${
-                    preset === p.value
+                  onClick={() => setPreset(p)}
+                  className={`rounded-md border px-3 py-2 text-start text-sm ${
+                    preset === p
                       ? 'border-brand-600 bg-brand-50 dark:bg-slate-800'
                       : 'border-slate-300 dark:border-slate-700'
                   }`}
                 >
-                  <span className="block font-medium">{p.label}</span>
-                  <span className="block text-xs text-slate-500">{p.hint}</span>
+                  <span className="block font-medium">{t(`preset.${p}`)}</span>
+                  <span className="block text-xs text-slate-500">{t(`preset.${p}_hint`)}</span>
                 </button>
               ))}
             </div>
           </fieldset>
 
+          <label className="block">
+            <span className="text-sm font-medium">{t('upload.speech_language')}</span>
+            <select
+              value={speechLang}
+              onChange={(e) => setSpeechLang(e.target.value as Lang)}
+              className="mt-1 block w-full rounded-md border border-slate-300 bg-transparent px-3 py-2 dark:border-slate-700"
+            >
+              {LANGS.map((l) => (
+                <option key={l} value={l} lang={l}>
+                  {t(`lang.${l}`)}
+                </option>
+              ))}
+            </select>
+          </label>
+
           {uploading ? (
             <div className="space-y-3">
-              <ProgressBar value={progress} label="Uploading" />
+              <ProgressBar value={progress} label={t('upload.uploading')} />
               <button
                 type="button"
                 onClick={() => abortRef.current?.abort()}
                 className="text-sm text-slate-500 hover:text-slate-800"
               >
-                Cancel
+                {t('common.cancel')}
               </button>
             </div>
           ) : (
@@ -230,7 +240,7 @@ export function UploadPage() {
               onClick={() => void submit()}
               className="w-full rounded-md bg-brand-600 px-4 py-2.5 font-medium text-white hover:bg-brand-700"
             >
-              Upload and analyze
+              {t('upload.submit')}
             </button>
           )}
         </div>

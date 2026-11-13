@@ -1,7 +1,9 @@
 // Bar under the video with a marker for every issue. Click a marker to jump there.
 import { useState } from 'react'
 import type { Category, Issue } from '../api/client'
-import { CATEGORY_LABELS, CATEGORY_ORDER } from '../lib/categories'
+import { useI18n } from '../i18n'
+import { CATEGORY_ORDER } from '../lib/categories'
+import { issueMessage } from '../lib/issues'
 import { formatTime } from '../lib/format'
 
 const CATEGORY_COLORS: Record<Category, string> = {
@@ -23,6 +25,7 @@ interface Props {
 
 export function VideoTimeline({ issues, duration, currentTime, onSeek }: Props) {
   const [hover, setHover] = useState<Issue | null>(null)
+  const { t, tk } = useI18n()
   if (!duration) return null
   const pct = (t: number) => `${Math.min(100, Math.max(0, (t / duration) * 100))}%`
   const lanes = CATEGORY_ORDER.filter((c) => issues.some((i) => i.category === c))
@@ -30,10 +33,11 @@ export function VideoTimeline({ issues, duration, currentTime, onSeek }: Props) 
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
       <div className="mb-2 flex items-center justify-between text-sm">
-        <span className="font-medium">Timeline</span>
-        <span className="text-xs text-slate-500">{hover ? `${formatTime(hover.start)} · ${hover.message}` : 'Hover or click a marker'}</span>
+        <span className="font-medium">{t('timeline.title')}</span>
+        <span className="text-xs text-slate-500">{hover ? `${formatTime(hover.start)} · ${issueMessage(hover, tk)}` : t('timeline.hint')}</span>
       </div>
       <div
+        dir="ltr"
         className="relative cursor-pointer space-y-1"
         onClick={(e) => {
           const rect = e.currentTarget.getBoundingClientRect()
@@ -41,14 +45,14 @@ export function VideoTimeline({ issues, duration, currentTime, onSeek }: Props) 
         }}
       >
         {lanes.map((cat) => (
-          <div key={cat} className="relative h-4 rounded bg-slate-100 dark:bg-slate-800" title={CATEGORY_LABELS[cat]}>
+          <div key={cat} className="relative h-4 rounded bg-slate-100 dark:bg-slate-800" title={t(`cat.${cat}`)}>
             {issues
               .filter((i) => i.category === cat)
               .map((i) => (
                 <button
                   key={i.id}
                   type="button"
-                  aria-label={`${formatTime(i.start)} ${i.message}`}
+                  aria-label={`${formatTime(i.start)} ${issueMessage(i, tk)}`}
                   onMouseEnter={() => setHover(i)}
                   onMouseLeave={() => setHover(null)}
                   onClick={(e) => {
@@ -67,7 +71,7 @@ export function VideoTimeline({ issues, duration, currentTime, onSeek }: Props) 
         {lanes.map((c) => (
           <span key={c} className="flex items-center gap-1">
             <span className={`h-2 w-2 rounded-full ${CATEGORY_COLORS[c]}`} />
-            {CATEGORY_LABELS[c]}
+            {t(`cat.${c}`)}
           </span>
         ))}
       </div>

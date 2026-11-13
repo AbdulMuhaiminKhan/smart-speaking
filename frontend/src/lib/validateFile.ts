@@ -1,25 +1,26 @@
+import type { MessageKey } from '../i18n/core'
+
+// Each check returns a message key (see i18n/en.ts), or null when the file is fine.
 export const MAX_BYTES = 2 * 1024 ** 3
 export const MAX_SECONDS = 15 * 60
 export const MIN_SECONDS = 5
 const EXTENSIONS = ['.mp4', '.webm', '.mov', '.m4v']
 
-export function checkExtension(name: string): string | null {
+export function checkExtension(name: string): MessageKey | null {
   const lower = name.toLowerCase()
-  return EXTENSIONS.some((ext) => lower.endsWith(ext))
-    ? null
-    : 'Please choose an mp4, webm or mov video.'
+  return EXTENSIONS.some((ext) => lower.endsWith(ext)) ? null : 'upload.err_ext'
 }
 
-export function checkSize(bytes: number): string | null {
-  if (bytes === 0) return 'This file is empty.'
-  if (bytes > MAX_BYTES) return 'This file is larger than 2 GB.'
+export function checkSize(bytes: number): MessageKey | null {
+  if (bytes === 0) return 'upload.err_empty'
+  if (bytes > MAX_BYTES) return 'upload.err_big'
   return null
 }
 
-export function checkDuration(seconds: number | null): string | null {
+export function checkDuration(seconds: number | null): MessageKey | null {
   if (seconds === null || !Number.isFinite(seconds)) return null // server checks it
-  if (seconds < MIN_SECONDS) return `This clip is under ${MIN_SECONDS} seconds.`
-  if (seconds > MAX_SECONDS + 30) return 'This clip is longer than 15 minutes.'
+  if (seconds < MIN_SECONDS) return 'upload.err_short'
+  if (seconds > MAX_SECONDS + 30) return 'upload.err_long'
   return null
 }
 

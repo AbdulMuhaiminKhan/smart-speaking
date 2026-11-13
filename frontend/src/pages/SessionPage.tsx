@@ -2,7 +2,6 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import {
   api,
-  ApiError,
   reportApi,
   type BodyResult,
   type PacingResult,
@@ -17,7 +16,9 @@ import { StatusBadge } from '../components/StatusBadge'
 import { ReportView } from '../components/ReportView'
 import { VideoTimeline } from '../components/VideoTimeline'
 import { TranscriptLegend, TranscriptView } from '../components/TranscriptView'
-import { formatTime, STAGE_LABELS } from '../lib/format'
+import { useI18n } from '../i18n'
+import { errorText } from '../lib/errors'
+import { formatTime } from '../lib/format'
 
 const POLL_MS = 1000
 
@@ -35,6 +36,7 @@ export function SessionPage() {
   const [duration, setDuration] = useState(0)
   const [error, setError] = useState<string | null>(null)
   const [currentTime, setCurrentTime] = useState(0)
+  const { t, tk, formatDate } = useI18n()
 
   const load = useCallback(async () => {
     try {
@@ -43,9 +45,10 @@ export function SessionPage() {
       setError(null)
       return s
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : 'Could not load this session.')
+      setError(errorText(e, t, 'err.load_session'))
       return null
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id])
 
   // Poll while the job is running.
@@ -96,17 +99,17 @@ export function SessionPage() {
       }
       void poll()
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : 'Retry failed.')
+      setError(errorText(e, t, 'err.retry_failed'))
     }
   }
 
   async function remove() {
-    if (!confirm('Delete this session and its recording? This cannot be undone.')) return
+    if (!confirm(t('session.confirm_delete'))) return
     try {
       await api.deleteSession(id)
       navigate('/sessions')
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : 'Delete failed.')
+      setError(errorText(e, t, 'err.delete_failed'))
     }
   }
 
@@ -115,12 +118,12 @@ export function SessionPage() {
       <div className="text-center">
         <p className="text-red-700 dark:text-red-300">{error}</p>
         <Link to="/sessions" className="mt-4 inline-block text-brand-600">
-          Back to sessions
+          {t('session.back')}
         </Link>
       </div>
     )
   }
-  if (!session) return <p className="text-slate-500">Loading…</p>
+  if (!session) return <p className="text-slate-500">{t('common.loading')}</p>
 
   const running = session.status === 'queued' || session.status === 'processing'
   const fileWarnings = session.warnings.map((w) => w.split(': ').slice(1).join(': ') || w)
@@ -134,7 +137,7 @@ export function SessionPage() {
             <StatusBadge status={session.status} />
           </div>
           <p className="mt-1 text-sm text-slate-500">
-            {new Date(session.created_at).toLocaleString()}
+            {formatDate(session.created_at)}
             {session.duration_s !== null && ` · ${formatTime(session.duration_s)}`}
           </p>
         </div>
@@ -144,7 +147,7 @@ export function SessionPage() {
               href={reportApi.pdfUrl(id)}
               className="rounded-md bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700"
             >
-              Export PDF
+              {t('session.export_pdf')}
             </a>
           )}
         <button
@@ -152,7 +155,7 @@ export function SessionPage() {
           onClick={() => void remove()}
           className="rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-600 hover:border-red-400 hover:text-red-700 dark:border-slate-700 dark:text-slate-300"
         >
-          Delete
+          {t('common.delete')}
         </button>
         </div>
       </div>
@@ -164,19 +167,19 @@ export function SessionPage() {
             indeterminate={session.status === 'queued'}
             label={
               session.status === 'queued'
-                ? 'Waiting for the analyzer…'
-                : (STAGE_LABELS[session.stage ?? ''] ?? 'Analyzing')
+                ? t('session.waiting')
+                : tk(`stage.${session.stage ?? ''}`, t('stage.default'))
             }
           />
           <p className="mt-3 text-xs text-slate-500">
-            You can leave this page. The analysis keeps running on this computer.
+            {t('session.can_leave')}
           </p>
         </div>
       )}
 
       {session.status === 'failed' && (
         <div role="alert" className="rounded-xl bg-red-50 p-5 text-red-800 dark:bg-red-950 dark:text-red-200">
-          <p className="font-medium">We couldn't analyze this recording.</p>
+          <p className="font-medium">{t('session.failed_title')}</p>
           <p className="mt-1 text-sm">{session.error_message}</p>
           {session.error_code === 'internal_error' || session.error_code === 'queue_unavailable' ? (
             <button
@@ -184,11 +187,11 @@ export function SessionPage() {
               onClick={() => void retry()}
               className="mt-3 rounded-md bg-red-700 px-3 py-1.5 text-sm text-white"
             >
-              Try again
+              {t('session.try_again')}
             </button>
           ) : (
             <Link to="/upload" className="mt-3 inline-block text-sm underline">
-              Upload a different file
+              {t('session.upload_other')}
             </Link>
           )}
         </div>
@@ -206,7 +209,7 @@ export function SessionPage() {
         <div className="space-y-3">
           {session.media_deleted ? (
             <div className="grid aspect-video place-items-center rounded-xl bg-slate-100 p-6 text-center text-sm text-slate-500 dark:bg-slate-800">
-              The video was deleted after analysis, as set in Settings. Your report and transcript are kept.
+              {t('session.video_deleted')}
             </div>
           ) : (
           <video
@@ -229,12 +232,12 @@ export function SessionPage() {
           )}
         </div>
         <section className="rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
-          <h2 className="mb-1 font-semibold">Transcript</h2>
+          <h2 className="mb-1 font-semibold">{t('session.transcript')}</h2>
           {transcript ? (
             <>
-              <p className="mb-2 text-xs text-slate-500">Click any word to jump there.</p>
+              <p className="mb-2 text-xs text-slate-500">{t('session.click_word')}</p>
               <TranscriptLegend />
-              <div className="max-h-[28rem] overflow-y-auto pr-2">
+              <div className="max-h-[28rem] overflow-y-auto pe-2">
                 <TranscriptView
                   transcript={transcript}
                   currentTime={currentTime}
@@ -246,7 +249,7 @@ export function SessionPage() {
             </>
           ) : (
             <p className="text-sm text-slate-500">
-              {running ? 'The transcript appears when the analysis finishes.' : 'No transcript.'}
+              {running ? t('session.transcript_pending') : t('session.no_transcript')}
             </p>
           )}
         </section>

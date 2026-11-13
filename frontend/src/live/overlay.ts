@@ -1,17 +1,8 @@
 // Draws boxes, skeleton lines and labels over the (mirrored) camera preview.
 import { FaceLandmarker, HandLandmarker, PoseLandmarker } from '@mediapipe/tasks-vision'
 import { bbox, checkFace, checkPosture, POSE, type Baseline, type FaceCheck, type P, type PostureCheck } from './bodyRules'
+import type { TFunction } from '../i18n/core'
 import type { TrackResult } from './tracker'
-
-export const EMOTION_LABELS: Record<string, string> = {
-  neutral: 'Neutral',
-  happy: 'Happy',
-  surprised: 'Surprised',
-  sad: 'Sad',
-  angry: 'Angry',
-  fearful: 'Worried',
-  disgusted: 'Displeased',
-}
 
 export interface FrameChecks {
   face: FaceCheck | null
@@ -53,7 +44,10 @@ function drawBox(ctx: CanvasRenderingContext2D, box: { x: number; y: number; w: 
     ctx.stroke()
   }
   const font = Math.max(14, W / 45)
-  ctx.font = `600 ${font}px Inter, system-ui, sans-serif`
+  ctx.font = `600 ${font}px Inter, system-ui, "Noto Nastaliq Urdu", sans-serif`
+  // Always lay labels out left to right from x; the browser still shapes Urdu text inside.
+  ctx.direction = 'ltr'
+  ctx.textAlign = 'left'
   const tw = ctx.measureText(label).width + font
   const ly = y - font * 1.6 < 0 ? y + h : y - font * 1.6
   ctx.fillStyle = color
@@ -116,7 +110,13 @@ function torsoBox(pts: P[], aspect: number) {
 
 const UPPER_BODY = PoseLandmarker.POSE_CONNECTIONS.filter((c) => c.start >= 11 && c.end >= 11 && c.start <= 24 && c.end <= 24)
 
-export function drawFrame(ctx: CanvasRenderingContext2D, r: TrackResult, aspect: number, baseline: Baseline | null): FrameChecks {
+export function drawFrame(
+  ctx: CanvasRenderingContext2D,
+  r: TrackResult,
+  aspect: number,
+  baseline: Baseline | null,
+  t: TFunction,
+): FrameChecks {
   ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
   let face: FaceCheck | null = null
   let posture: PostureCheck | null = null
@@ -128,7 +128,7 @@ export function drawFrame(ctx: CanvasRenderingContext2D, r: TrackResult, aspect:
     const color = posture ? (posture.ok ? GOOD : posture.headDown || posture.slouch ? BAD : WARN) : INFO
     drawLines(ctx, pts, UPPER_BODY, color)
     const torso = torsoBox(pts, aspect)
-    if (torso && posture) drawBox(ctx, torso, color, posture.label)
+    if (torso && posture) drawBox(ctx, torso, color, t(posture.labelKey))
   }
 
   const faceRaw = r.face?.faceLandmarks?.[0]
@@ -149,7 +149,7 @@ export function drawFrame(ctx: CanvasRenderingContext2D, r: TrackResult, aspect:
     drawLines(ctx, pts, FaceLandmarker.FACE_LANDMARKS_LEFT_IRIS, color, 0)
     drawLines(ctx, pts, FaceLandmarker.FACE_LANDMARKS_RIGHT_IRIS, color, 0)
     const box = bbox(pts, 0.01, false)
-    if (box) drawBox(ctx, box, color, `${face.label} · ${EMOTION_LABELS[face.emotion]}`)
+    if (box) drawBox(ctx, box, color, `${t(face.labelKey)} · ${t(`emotion.${face.emotion}`)}`)
   }
 
   const hands = r.hands?.landmarks ?? []
@@ -158,7 +158,8 @@ export function drawFrame(ctx: CanvasRenderingContext2D, r: TrackResult, aspect:
     drawLines(ctx, pts, HandLandmarker.HAND_CONNECTIONS, INFO, 0)
     const box = bbox(pts, 0.015, false)
     const side = r.hands?.handedness?.[i]?.[0]?.categoryName
-    if (box) drawBox(ctx, box, INFO, side ? `${side === 'Left' ? 'Right' : 'Left'} hand` : 'Hand')
+    // MediaPipe reports handedness for the unmirrored image, so swap it for the mirrored preview.
+    if (box) drawBox(ctx, box, INFO, side ? t(side === 'Left' ? 'body.right_hand' : 'body.left_hand') : t('body.hand'))
   })
 
   return { face, posture, handsVisible: hands.length }
