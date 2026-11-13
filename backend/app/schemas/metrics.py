@@ -23,6 +23,9 @@ class Issue(BaseModel):
     severity: Severity
     message: str
     text: str | None = None  # the words involved, when there are any
+    # The number in the message (seconds, words per minute), so the app can
+    # show the message in other languages.
+    value: float | None = None
 
 
 class TimePoint(BaseModel):

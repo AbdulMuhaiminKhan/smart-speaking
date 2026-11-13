@@ -54,6 +54,26 @@ Rules:
 - Answer with JSON only, matching the schema."""
 
 
+LANGUAGE_NAMES = {"en": "English", "de": "German", "ur": "Urdu"}
+
+
+def system_prompt(language: str = "en") -> str:
+    """The system prompt, asking for the coaching in the reader's language."""
+    if language == "en" or language not in LANGUAGE_NAMES:
+        return SYSTEM_PROMPT
+    name = LANGUAGE_NAMES[language]
+    extra = (
+        f"\n- Write every text field in {name}. The facts are in English; translate them, "
+        "keeping every number exactly as written (Western digits)."
+        "\n- Keep the transcript quote in \"original\" exactly as spoken, in its own language."
+    )
+    if language == "ur":
+        extra += "\n- Use Urdu script (not Roman Urdu) and a respectful \"آپ\" form."
+    elif language == "de":
+        extra += "\n- Address the speaker informally with \"du\"."
+    return SYSTEM_PROMPT + extra
+
+
 class _Item(BaseModel):
     text: str
     fact_ids: list[str]
@@ -243,14 +263,16 @@ def build_prompt(report: Report, transcript_text: str, facts: list[Fact]) -> str
     )
 
 
-def call_ollama(url: str, model: str, prompt: str, timeout_s: int = TIMEOUT_S) -> dict[str, Any]:
+def call_ollama(
+    url: str, model: str, prompt: str, timeout_s: int = TIMEOUT_S, language: str = "en"
+) -> dict[str, Any]:
     body = {
         "model": model,
         "stream": False,
         "format": LlmOutput.model_json_schema(),
         "options": {"temperature": 0.3, "num_ctx": 8192, "num_predict": 2500},
         "messages": [
-            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "system", "content": system_prompt(language)},
             {"role": "user", "content": prompt},
         ],
     }
@@ -415,11 +437,15 @@ def merge(
     )
 
 
-def run(report: Report, transcript_text: str, *, url: str, model: str) -> Report:
+def run(
+    report: Report, transcript_text: str, *, url: str, model: str, language: str = "en"
+) -> Report:
     """Return the report rewritten by the LLM, or the template report if Ollama fails."""
     facts = build_facts(report)
     try:
-        raw = call_ollama(url, model, build_prompt(report, transcript_text, facts))
+        raw = call_ollama(
+            url, model, build_prompt(report, transcript_text, facts), language=language
+        )
         out = LlmOutput.model_validate(raw)
     except (urllib.error.URLError, TimeoutError, OSError) as exc:
         log.warning("Ollama unavailable at %s (%s); using the template report", url, exc)
@@ -431,4 +457,5 @@ def run(report: Report, transcript_text: str, *, url: str, model: str) -> Report
         return report.model_copy(
             update={"llm_error": "The local AI coach returned an unusable answer."}
         )
-    return merge(report, out, facts, transcript_text, model)
+    merged = merge(report, out, facts, transcript_text, model)
+    return merged.model_copy(update={"language": language})

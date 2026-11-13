@@ -1,7 +1,7 @@
 """Step 4: filler words, hedges, repetition, vocabulary, sentences and script match.
 
-Word lists live in lexicons/<lang>.yaml so other languages can be added
-without code changes. Sentence clarity feedback comes from the LLM in Phase 5.
+Word lists live in lexicons/<lang>.yaml (en, de, ur) so other languages can be
+added without code changes. Sentence clarity feedback comes from the LLM.
 """
 
 from __future__ import annotations
@@ -26,8 +26,14 @@ OVERUSE_MIN_COUNT = 4
 OVERUSE_MIN_SHARE = 0.02
 SCRIPT_GAP_MIN_WORDS = 3
 
+SUPPORTED_LANGUAGES = ("en", "de", "ur")
+
 _PUNCT = re.compile(r"[^\w']+", re.UNICODE)
-_SENTENCE_END = (".", "?", "!")
+# Latin plus the Urdu full stop (U+06D4) and question mark (U+061F).
+_SENTENCE_END = (".", "?", "!", "\u06d4", "\u061f")
+_COMMAS = (",", "\u060c", "\u2026", "...")  # includes the Arabic-script comma
+# Arabic code points Whisper sometimes writes in place of the Urdu letters.
+_URDU_LETTERS = str.maketrans({"\u064a": "\u06cc", "\u0649": "\u06cc", "\u0643": "\u06a9"})
 
 
 @dataclass(frozen=True)
@@ -38,11 +44,19 @@ class Lexicon:
     like_quotative_after: frozenset[str]
     hedges: tuple[tuple[str, ...], ...]
     stopwords: frozenset[str]
+    whisper_prompt: str = ""
+    # Words like English "like" with their own rules (see is_contextual_filler).
+    like_words: frozenset[str] = frozenset()
 
 
 def _phrases(items: list[str]) -> tuple[tuple[str, ...], ...]:
     # Longest phrases first so "i think maybe" wins over "i think".
-    return tuple(sorted((tuple(p.split()) for p in items), key=len, reverse=True))
+    tokens = (tuple(t for t in (normalize(x) for x in p.split()) if t) for p in items)
+    return tuple(sorted((t for t in tokens if t), key=len, reverse=True))
+
+
+def _words(items: list[str] | None) -> frozenset[str]:
+    return frozenset(n for n in (normalize(x) for x in items or []) if n)
 
 
 @lru_cache
@@ -50,23 +64,27 @@ def load_lexicon(language: str = "en") -> Lexicon:
     path = LEXICON_DIR / f"{language}.yaml"
     if not path.exists():
         path = LEXICON_DIR / "en.yaml"
-    data: dict[str, Any] = yaml.safe_load(path.read_text())
+    # BaseLoader keeps every value a string ("no" and "yes" are words, not booleans).
+    data: dict[str, Any] = yaml.load(path.read_text(encoding="utf-8"), Loader=yaml.BaseLoader)
     return Lexicon(
         fillers_always=_phrases(data["fillers"]["always"]),
-        fillers_contextual=frozenset(data["fillers"]["contextual"]),
-        like_not_after=frozenset(data.get("like_not_filler_after", [])),
-        like_quotative_after=frozenset(data.get("like_quotative_after", [])),
+        fillers_contextual=_words(data["fillers"].get("contextual")),
+        like_not_after=_words(data.get("like_not_filler_after")),
+        like_quotative_after=_words(data.get("like_quotative_after")),
         hedges=_phrases(data["hedges"]),
-        stopwords=frozenset(data["stopwords"]),
+        stopwords=_words(data["stopwords"]),
+        whisper_prompt=str(data.get("whisper_prompt", "")).strip(),
+        like_words=_words(data.get("like_words")),
     )
 
 
 def normalize(text: str) -> str:
-    return _PUNCT.sub("", text.lower().replace("’", "'"))
+    """Lowercase, drop punctuation and Arabic-script diacritics, unify Urdu letters."""
+    return _PUNCT.sub("", text.lower().replace("\u2019", "'").translate(_URDU_LETTERS))
 
 
 def _has_comma(raw: str) -> bool:
-    return raw.rstrip().endswith((",", "…", "..."))
+    return raw.rstrip().endswith(_COMMAS)
 
 
 def _sentence_start(words: list[Word], i: int) -> bool:
@@ -105,16 +123,15 @@ def is_contextual_filler(words: list[Word], norm: list[str], i: int, lex: Lexico
     prev = norm[i - 1] if i > 0 else ""
     prev_comma = i > 0 and _has_comma(words[i - 1].text)
     own_comma = _has_comma(words[i].text)
-    if w == "like":
+    if w in lex.like_words:
         if prev in lex.like_quotative_after:
             return True
         if prev in lex.like_not_after:
             return False
         return prev_comma or own_comma
-    if w in {"so", "well"}:
-        # "So, ..." or "Well, ..." at the start of a sentence.
-        return _sentence_start(words, i) and own_comma
-    return False
+    # Other contextual words ("So, ...", "Also, ...", "اچھا، ...") count only at the
+    # start of a sentence and followed by a comma.
+    return _sentence_start(words, i) and own_comma
 
 
 def find_fillers(words: list[Word], norm: list[str], lex: Lexicon) -> list[Occurrence]:
@@ -133,7 +150,7 @@ def find_fillers(words: list[Word], norm: list[str], lex: Lexicon) -> list[Occur
 
 def _ends_phrase(raw: str) -> bool:
     # "Heating. Heating is..." repeats on purpose across a break; not a stumble.
-    return raw.rstrip("\"')").endswith((*_SENTENCE_END, ",", ";", ":"))
+    return raw.rstrip("\"')").endswith((*_SENTENCE_END, ",", ";", ":", "\u060c", "\u061b"))
 
 
 def find_repetitions(words: list[Word], norm: list[str], skip: set[int]) -> list[Occurrence]:

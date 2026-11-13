@@ -57,6 +57,7 @@ def pacing_issues(p: PacingMetrics) -> list[Issue]:
                     if pause.kind == "awkward"
                     else f"{pause.duration:.1f} s hesitation mid-sentence"
                 ),
+                value=round(pause.duration, 1),
             )
         )
     half = pacing_mod.WINDOW_S / 2
@@ -70,6 +71,7 @@ def pacing_issues(p: PacingMetrics) -> list[Issue]:
                 end=e,
                 severity="major" if peak > 190 else "minor",
                 message=f"Speaking fast, up to {peak:.0f} words per minute",
+                value=round(peak),
             )
         )
     for i, (s, e, low) in enumerate(_merge_windows(p.wpm_series, pacing_mod.SLOW_WPM, False, half)):
@@ -82,6 +84,7 @@ def pacing_issues(p: PacingMetrics) -> list[Issue]:
                 end=e,
                 severity="minor",
                 message=f"Speaking slowly, down to {low:.0f} words per minute",
+                value=round(low),
             )
         )
     return out
@@ -247,6 +250,7 @@ def pronunciation_issues(p: PronunciationMetrics) -> list[Issue]:
                 severity="minor",
                 message=f'"{u.word}" {label} (estimate)',
                 text=u.word,
+                value=1.0 if u.reason == "mispronounced" else 0.0,
             )
         )
     return out

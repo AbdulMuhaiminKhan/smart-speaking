@@ -1,0 +1,154 @@
+# Urdu lexicon for the language step. Phrases are matched on whole normalized
+# words (no punctuation or diacritics), longest first. Common English fillers are
+# included because Urdu speakers often switch into English mid-sentence.
+
+# Whisper drops fillers unless the prompt is written in a disfluent style.
+whisper_prompt: >-
+  اُم، تو، یعنی، میرا مطلب ہے، میں سوچ رہا تھا کہ... ہمم، اچھا، بس، ویسے،
+  آں، دراصل، آپ کو پتا ہے، تو میں شروع کرتا ہوں۔
+
+fillers:
+  # Always counted as fillers.
+  always:
+    - ام
+    - امم
+    - آں
+    - اں
+    - ہمم
+    - ایں
+    - یعنی کہ
+    - یعنی
+    - میرا مطلب ہے
+    - آپ کو پتا ہے
+    - آپ کو پتہ ہے
+    - آپ سمجھ رہے ہیں
+    - دراصل
+    - بیسیکلی
+    - ایکچوئلی
+    - لٹرلی
+    - um
+    - umm
+    - uh
+    - hmm
+    - basically
+    - actually
+    - literally
+    - you know
+    - i mean
+  # Counted only at the start of a sentence and followed by a comma ("اچھا، ...").
+  contextual:
+    - تو
+    - اچھا
+    - بس
+    - ویسے
+    - مطلب
+    - ہاں
+    - چلیں
+    - خیر
+    - so
+    - okay
+
+hedges:
+  - مجھے یقین نہیں ہے
+  - مجھے یقین نہیں
+  - میرے خیال میں
+  - میرا خیال ہے
+  - مجھے لگتا ہے
+  - کسی حد تک
+  - کچھ حد تک
+  - تھوڑا سا
+  - ممکن ہے
+  - امید ہے
+  - شاید
+  - غالباً
+  - i think
+  - maybe
+  - kind of
+  - sort of
+
+stopwords:
+  - میں
+  - ہے
+  - ہیں
+  - تھا
+  - تھی
+  - تھے
+  - کا
+  - کی
+  - کے
+  - کو
+  - سے
+  - نے
+  - پر
+  - اور
+  - یا
+  - لیکن
+  - مگر
+  - کہ
+  - جو
+  - یہ
+  - وہ
+  - اس
+  - ان
+  - ایک
+  - بھی
+  - ہی
+  - تو
+  - نہیں
+  - نہ
+  - ہم
+  - آپ
+  - تم
+  - مجھے
+  - میرا
+  - میری
+  - میرے
+  - ہمارا
+  - ہماری
+  - ہمارے
+  - کیا
+  - کر
+  - کرنا
+  - کرتے
+  - کرتا
+  - کرتی
+  - ہو
+  - ہوں
+  - ہوتا
+  - ہوتی
+  - ہوتے
+  - گا
+  - گی
+  - گے
+  - رہا
+  - رہی
+  - رہے
+  - جب
+  - اب
+  - یہاں
+  - وہاں
+  - کیوں
+  - کیسے
+  - کون
+  - کہاں
+  - لیے
+  - لئے
+  - ساتھ
+  - بعد
+  - پہلے
+  - والا
+  - والی
+  - والے
+  - اپنا
+  - اپنی
+  - اپنے
+  - گیا
+  - گئی
+  - گئے
+  - سکتا
+  - سکتی
+  - سکتے
+  - بہت
+  - کچھ
+  - سب
+  - ہر

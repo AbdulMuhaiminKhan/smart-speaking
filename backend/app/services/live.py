@@ -130,13 +130,14 @@ def whisper_transcribe_fn(model_size: str, models_dir: str, lang: str = "en") ->
     from app.pipeline import transcribe as tr
 
     model = tr.load_model(model_size, models_dir, "auto")
+    prompt = tr.filler_prompt(lang)
 
     def run(samples: npt.NDArray[np.float32], offset: float) -> list[Word]:
         segments, _ = model.transcribe(
             samples,
             language=lang,
             word_timestamps=True,
-            initial_prompt=tr.FILLER_PROMPT,
+            initial_prompt=prompt,
             condition_on_previous_text=False,
             vad_filter=False,
             beam_size=1,

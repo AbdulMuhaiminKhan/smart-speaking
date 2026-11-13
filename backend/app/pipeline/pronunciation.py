@@ -36,6 +36,9 @@ MISPRONOUNCED_BELOW = 0.45  # flagged on phonemes alone
 UNCLEAR_BELOW = 0.65  # flagged when Whisper is also unsure
 LOW_CONFIDENCE = 0.5
 ESPEAK_VOICES = {"en": "en-us", "es": "es", "fr": "fr-fr", "de": "de", "it": "it", "pt": "pt"}
+# Languages the phoneme check is trusted for. Urdu is left out: the phoneme model
+# saw little Urdu in training, so its verdicts would not be fair.
+PRONUNCIATION_LANGUAGES = frozenset({"en", "de"})
 
 # Phones that sound alike or that espeak and the model spell differently.
 _NORMALIZE = {
@@ -308,7 +311,10 @@ def analyze(
         for k, (w, norm) in enumerate(zip(seg_words, norms, strict=True)):
             exp = exp_phones[k]
             prev = seg_words[k - 1].text if k else ""
-            starts = k == 0 or prev.rstrip("\"')").endswith((".", "?", "!"))
+            # German capitalizes every noun, so a capital letter does not mark a name.
+            starts = (
+                k == 0 or prev.rstrip("\"')").endswith((".", "?", "!")) or language == "de"
+            )
             if not checkable(w, norm, skip, starts) or len(exp) < MIN_PHONES:
                 continue
             checked += 1

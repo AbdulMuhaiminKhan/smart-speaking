@@ -21,6 +21,7 @@ from app.db.models import (
     User,
 )
 from app.db.session import get_db
+from app.pipeline.language import SUPPORTED_LANGUAGES
 from app.schemas.api import SessionOut
 from app.services import storage
 from app.services.queue import Enqueuer, get_enqueuer
@@ -59,6 +60,8 @@ def create_session(
 ) -> PracticeSession:
     if model_preset not in MODEL_PRESETS:
         raise error(422, "bad_preset", f"model_preset must be one of {sorted(MODEL_PRESETS)}.")
+    if language not in SUPPORTED_LANGUAGES:
+        raise error(422, "bad_language", f"language must be one of {list(SUPPORTED_LANGUAGES)}.")
     if mode == SessionMode.script and not (script_text and script_text.strip()):
         raise error(422, "script_required", "Script mode needs the script text.")
 

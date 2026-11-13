@@ -4,9 +4,12 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
+Language = Literal["en", "de", "ur"]
+
 
 class UserSettings(BaseModel):
-    language: Literal["en"] = "en"  # more languages can be added with a lexicon file
+    language: Language = "en"  # language you speak in recordings
+    ui_language: Language = "en"  # language of the app and the written coaching
     model_preset: Literal["fast", "balanced", "accurate"] = "balanced"
     auto_delete_video: bool = False
 

@@ -74,3 +74,10 @@ def test_result_not_ready(client: TestClient) -> None:
     sid = upload(client)["body"]["id"]
     res = client.get(f"/api/sessions/{sid}/results/transcript")
     assert res.status_code == 404 and res.json()["code"] == "not_ready"
+
+
+def test_upload_accepts_supported_languages_only(client: TestClient) -> None:
+    ok = upload(client, language="ur")
+    assert ok["status"] == 201 and ok["body"]["language"] == "ur"
+    bad = upload(client, language="fr")
+    assert bad["status"] == 422 and bad["body"]["code"] == "bad_language"
