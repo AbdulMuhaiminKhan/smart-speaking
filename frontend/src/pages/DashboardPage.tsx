@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { authApi, type Category, type Progress, type SessionScores } from '../api/client'
+import { authApi, type Achievements, type Category, type Goals, type Progress, type SessionScores } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
+import { GoalsPanel } from '../components/GoalsPanel'
 import { TrendChart } from '../components/TrendChart'
 import { useI18n } from '../i18n'
 import type { MessageKey } from '../i18n/core'
@@ -70,11 +71,21 @@ const METRICS: Record<Metric, MetricDef> = {
   },
 }
 
-function Trends({ progress }: { progress: Progress }) {
+function Trends({ progress, goals }: { progress: Progress; goals?: Goals }) {
   const { t } = useI18n()
   const [metric, setMetric] = useState<Metric>('score')
   const [category, setCategory] = useState<Category | 'overall'>('overall')
-  const def = METRICS[metric]
+  const base = METRICS[metric]
+  // Your own goals set the green band where you have them.
+  const band: [number, number] | undefined =
+    metric === 'wpm' && goals?.wpm_low && goals.wpm_high
+      ? [goals.wpm_low, goals.wpm_high]
+      : metric === 'fillers' && goals?.max_fillers_per_min != null
+        ? [0, goals.max_fillers_per_min]
+        : metric === 'score' && goals?.min_score
+          ? [goals.min_score, 100]
+          : base.band
+  const def = { ...base, band }
   const values = progress.sessions.map((s) => def.value(s, category))
   const fmt = (v: number) => v.toFixed(def.digits)
   const change = recentChange(values)
@@ -162,8 +173,10 @@ export function DashboardPage() {
   const [progress, setProgress] = useState<Progress | null>(null)
   const [error, setError] = useState<string | null>(null)
   const { t } = useI18n()
+  const [ach, setAch] = useState<Achievements | null>(null)
 
   useEffect(() => {
+    authApi.achievements().then(setAch).catch(() => setAch(null))
     authApi
       .progress()
       .then(setProgress)
@@ -214,7 +227,9 @@ export function DashboardPage() {
             <Stat label={t('dash.average')} value={progress.average !== null ? String(Math.round(progress.average)) : '–'} />
           </div>
 
-          <Trends progress={progress} />
+          {ach && <GoalsPanel data={ach} />}
+
+          <Trends progress={progress} goals={user?.settings.goals} />
 
           <div className={card}>
             <h2 className="mb-3 font-semibold">{t('dash.by_category')}</h2>

@@ -325,9 +325,18 @@ export const reportApi = {
 
 export type Lang = 'en' | 'de' | 'ur'
 
+export interface Goals {
+  sessions_per_week: number | null
+  max_fillers_per_min: number | null
+  wpm_low: number | null
+  wpm_high: number | null
+  min_score: number | null
+}
+
 export interface UserSettings {
   language: Lang
   ui_language: Lang
+  goals: Goals
   model_preset: ModelPreset
   auto_delete_video: boolean
 }
@@ -377,6 +386,28 @@ export interface Progress {
   category_change: Partial<Record<Category, number | null>>
 }
 
+export interface Achievement {
+  id: string
+  earned: boolean
+  earned_at: string | null
+  session_id: string | null
+  progress: number
+}
+
+export interface GoalStatus {
+  id: 'sessions_per_week' | 'fillers' | 'pace' | 'score'
+  target: string
+  current: number | null
+  met: boolean
+}
+
+export interface Achievements {
+  streak: { current: number; best: number; days: string[] }
+  week_sessions: number
+  goals: GoalStatus[]
+  achievements: Achievement[]
+}
+
 const json = (method: string, body: unknown): RequestInit => ({
   method,
   headers: { 'Content-Type': 'application/json' },
@@ -394,4 +425,6 @@ export const authApi = {
     request<void>('/api/auth/me/password', json('POST', { current_password, new_password })),
   deleteAccount: (password: string) => request<void>('/api/auth/me', json('DELETE', { password })),
   progress: () => request<Progress>('/api/progress'),
+  achievements: () =>
+    request<Achievements>(`/api/progress/achievements?tz=${encodeURIComponent(Intl.DateTimeFormat().resolvedOptions().timeZone)}`),
 }

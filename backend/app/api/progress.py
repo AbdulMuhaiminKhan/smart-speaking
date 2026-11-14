@@ -108,3 +108,16 @@ def session_rows(db: DbDep, user_id: uuid.UUID) -> list[SessionScores]:
             )
         )
     return rows
+
+
+@router.get("/achievements")
+def achievements(db: DbDep, user: UserDep, tz: str | None = None) -> dict[str, Any]:
+    """Streak, weekly goal progress and achievements. `tz` is an IANA zone like Europe/Berlin."""
+    from datetime import UTC
+
+    from app.schemas.user import UserSettings
+    from app.services.achievements import compute, tz_or_utc
+
+    goals = UserSettings.model_validate(user.settings or {}).goals
+    rows = session_rows(db, user.id)
+    return compute(rows, goals, tz_or_utc(tz), datetime.now(UTC)).model_dump(mode="json")

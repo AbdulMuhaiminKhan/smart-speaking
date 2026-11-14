@@ -1,6 +1,15 @@
 import { useState, type FormEvent } from 'react'
+
+const DEFAULT_GOALS: Goals = { sessions_per_week: 3, max_fillers_per_min: 3, wpm_low: 120, wpm_high: 160, min_score: null }
+const GOAL_FIELDS: { key: keyof Goals; label: 'goal.field_sessions' | 'goal.field_fillers' | 'goal.field_wpm_low' | 'goal.field_wpm_high' | 'goal.field_score'; min: number; max: number; step: number }[] = [
+  { key: 'sessions_per_week', label: 'goal.field_sessions', min: 1, max: 21, step: 1 },
+  { key: 'max_fillers_per_min', label: 'goal.field_fillers', min: 0, max: 30, step: 0.5 },
+  { key: 'wpm_low', label: 'goal.field_wpm_low', min: 60, max: 250, step: 5 },
+  { key: 'wpm_high', label: 'goal.field_wpm_high', min: 60, max: 250, step: 5 },
+  { key: 'min_score', label: 'goal.field_score', min: 1, max: 100, step: 1 },
+]
 import { useNavigate } from 'react-router-dom'
-import { authApi, type Lang, type ModelPreset, type UserSettings } from '../api/client'
+import { authApi, type Goals, type Lang, type ModelPreset, type UserSettings } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
 import { useI18n } from '../i18n'
 import { LANGS } from '../i18n/core'
@@ -18,6 +27,7 @@ export function SettingsPage() {
   const [error, setError] = useState<string | null>(null)
   const [pw, setPw] = useState({ current: '', next: '' })
   const [deletePw, setDeletePw] = useState('')
+  const [goals, setGoals] = useState<Goals>(user!.settings.goals ?? DEFAULT_GOALS)
 
   async function save(next: UserSettings) {
     setSettings(next)
@@ -121,6 +131,37 @@ export function SettingsPage() {
             ))}
           </div>
         </fieldset>
+      </section>
+
+      <section id="goals" className={card}>
+        <h2 className="font-semibold">{t('goal.settings_title')}</h2>
+        <p className="mb-3 text-xs text-slate-500">{t('goal.settings_hint')}</p>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault()
+            void save({ ...settings, goals })
+          }}
+          className="grid gap-3 sm:grid-cols-3"
+        >
+          {GOAL_FIELDS.map((f) => (
+            <label key={f.key} className="text-sm font-medium">
+              {t(f.label)}
+              <input
+                type="number"
+                inputMode="decimal"
+                min={f.min}
+                max={f.max}
+                step={f.step}
+                value={goals[f.key] ?? ''}
+                onChange={(e) => setGoals({ ...goals, [f.key]: e.target.value === '' ? null : Number(e.target.value) })}
+                className={input}
+              />
+            </label>
+          ))}
+          <div className="flex items-end">
+            <button className="rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700">{t('goal.save')}</button>
+          </div>
+        </form>
       </section>
 
       <section className={card}>
