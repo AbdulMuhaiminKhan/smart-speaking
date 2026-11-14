@@ -47,8 +47,8 @@ function Shell({ title, children, footer }: { title: string; children: React.Rea
                 rx="7"
                 ry="5"
                 transform={`rotate(-22 ${x} ${y})`}
-                fill={filled ? 'oklch(0.86 0.11 85)' : 'none'}
-                stroke="oklch(0.86 0.11 85)"
+                fill={filled ? 'oklch(0.86 0.05 262)' : 'none'}
+                stroke="oklch(0.86 0.05 262)"
                 strokeWidth="2"
               />
             ))}

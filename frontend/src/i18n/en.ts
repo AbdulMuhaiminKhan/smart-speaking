@@ -244,9 +244,9 @@ export const en = {
   'tr.hedge': 'hedge',
   'tr.repeat': 'repeat',
   'tr.unclear_estimate': 'may be unclear (estimate)',
-  'tr.good_pause': '‖ good pause',
-  'tr.hesitation': '‖ hesitation',
-  'tr.long_silence': '‖ long silence',
+  'tr.good_pause': 'good pause',
+  'tr.hesitation': 'hesitation',
+  'tr.long_silence': 'long silence',
   'tr.unclear_word': 'unclear word',
   'tr.confidence': 'confidence {n}%',
   'tr.pause': '{n} s pause',
@@ -517,12 +517,14 @@ export const en = {
   'notes.title': 'Your notes',
   'notes.add_at': 'Add note at {time}',
   'notes.placeholder': 'What do you want to remember about this moment?',
-  'notes.empty': 'Pause anywhere and pin a note to that moment. Notes show as pink pins on the timeline and in the PDF.',
+  'notes.empty': 'Pause anywhere and pin a note to that moment. Notes show as square pins on the timeline and in the PDF.',
   'notes.edit': 'Edit',
   'notes.save_failed': 'The note could not be saved.',
   'notes.speed': 'Speed',
   'timeline.legend_heads': 'Filled head: major · open head: minor · diamond: question or note',
   'auth.pitch': 'Practice a talk, then read it back like a score: your pace, your pauses, your filler words, each one marked where it happened.',
+  'goal.met': 'Target met',
+  'goal.not_met': 'Target not met yet',
 } as const
 
 export type MessageKey = keyof typeof en

@@ -23,6 +23,9 @@ const PATHS = {
   check: 'M4.5 12.5l5 5 10-11',
   note: 'M5 4h14v12l-4 4H5zM15 20v-4h4M8 9h8M8 13h5',
   trash: 'M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3',
+  up: 'M12 19V5M6 11l6-6 6 6',
+  down: 'M12 5v14M6 13l6 6 6-6',
+  cross: 'M6 6l12 12M18 6L6 18',
 } as const
 
 export type IconName = keyof typeof PATHS

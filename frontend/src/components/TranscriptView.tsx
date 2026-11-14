@@ -2,6 +2,22 @@ import type { Issue, PacingResult, Transcript } from '../api/client'
 import { useI18n } from '../i18n'
 import { formatTime } from '../lib/format'
 
+/** Score marks for pauses: a breath mark (good pause), a caesura (hesitation), a fermata (long silence). */
+export function PauseMark({ kind, className = '' }: { kind: 'effective' | 'hesitation' | 'awkward'; className?: string }) {
+  return (
+    <svg width="12" height="14" viewBox="0 0 12 14" className={`inline-block align-[-2px] ${className}`} aria-hidden="true">
+      {kind === 'effective' && <path d="M6 2.5c1.6 0 2.4 1 2.4 2.2S7.4 7 5.6 7.6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />}
+      {kind === 'hesitation' && <path d="M3 12L6.5 2M6.5 12L10 2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />}
+      {kind === 'awkward' && (
+        <>
+          <path d="M1.5 9a4.5 4.5 0 0 1 9 0" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+          <circle cx="6" cy="8.6" r="1.3" fill="currentColor" />
+        </>
+      )}
+    </svg>
+  )
+}
+
 interface Props {
   transcript: Transcript
   currentTime: number
@@ -31,9 +47,9 @@ export function TranscriptLegend() {
       <span className={`rounded px-1.5 ${MARK.hedge}`}>{t('tr.hedge')}</span>
       <span className={`rounded px-1.5 ${MARK.repetition}`}>{t('tr.repeat')}</span>
       <span className={`rounded px-1.5 ${MARK.mispronounced}`}>{t('tr.unclear_estimate')}</span>
-      <span className={PAUSE.effective}>{t('tr.good_pause')}</span>
-      <span className={PAUSE.hesitation}>{t('tr.hesitation')}</span>
-      <span className={PAUSE.awkward}>{t('tr.long_silence')}</span>
+      <span className={PAUSE.effective}><PauseMark kind="effective" /> {t('tr.good_pause')}</span>
+      <span className={PAUSE.hesitation}><PauseMark kind="hesitation" /> {t('tr.hesitation')}</span>
+      <span className={PAUSE.awkward}><PauseMark kind="awkward" /> {t('tr.long_silence')}</span>
       <span className="underline decoration-amber-400 decoration-dotted underline-offset-4">{t('tr.unclear_word')}</span>
     </div>
   )
@@ -77,7 +93,7 @@ export function TranscriptView({ transcript, currentTime, onSeek, issues = [], p
                   </button>
                   {pause && (
                     <span className={`mx-0.5 font-semibold ${PAUSE[pause.kind]}`} title={t('tr.pause', { n: pause.duration.toFixed(1) })}>
-                      ‖
+                      <PauseMark kind={pause.kind} />
                     </span>
                   )}{' '}
                 </span>

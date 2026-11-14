@@ -5,8 +5,6 @@ import { tempoMarking } from '../lib/tempo'
 
 const MIN = 60
 const MAX = 220
-const LOW = 110
-const HIGH = 170
 
 function polar(v: number, r: number): [number, number] {
   const a = Math.PI * (1 - (Math.min(MAX, Math.max(MIN, v)) - MIN) / (MAX - MIN))
@@ -19,8 +17,10 @@ function arc(from: number, to: number, r: number): string {
   return `M${x0.toFixed(1)} ${y0.toFixed(1)} A${r} ${r} 0 0 1 ${x1.toFixed(1)} ${y1.toFixed(1)}`
 }
 
-export function PaceGauge({ wpm }: { wpm: number | null }) {
+export function PaceGauge({ wpm, low = 110, high = 170 }: { wpm: number | null; low?: number; high?: number }) {
   const { t } = useI18n()
+  const LOW = low
+  const HIGH = high
   const zone = paceZone(wpm, LOW, HIGH)
   const [nx, ny] = polar(wpm ?? MIN, 62)
   const color = { none: 'text-slate-400', slow: 'text-sky-500', good: 'text-emerald-500', fast: 'text-amber-500' }[zone]

@@ -25,24 +25,41 @@ const BADGE_ICON: Record<string, IconName> = {
   improver: 'chart',
 }
 
-function Ring({ value, goal }: { value: number; goal: number }) {
-  const r = 34
-  const c = 2 * Math.PI * r
-  const frac = Math.min(1, goal ? value / goal : 0)
+/** The week as one measure: a beat per planned session, a note head for each one done. */
+function Measure({ value, goal }: { value: number; goal: number }) {
+  const beats = Math.max(goal, value, 1)
+  const met = goal > 0 && value >= goal
+  const w = 36 + beats * 26
   return (
-    <svg viewBox="0 0 80 80" className="h-20 w-20 -rotate-90" aria-hidden="true">
-      <circle cx="40" cy="40" r={r} strokeWidth="8" fill="none" className="stroke-slate-100 dark:stroke-slate-800" />
-      <circle
-        cx="40"
-        cy="40"
-        r={r}
-        strokeWidth="8"
-        fill="none"
-        strokeLinecap="round"
-        strokeDasharray={c}
-        strokeDashoffset={c * (1 - frac)}
-        className={`${frac >= 1 ? 'stroke-emerald-500' : 'stroke-brand-600'} transition-[stroke-dashoffset] duration-700`}
-      />
+    <svg viewBox={`0 0 ${w} 48`} className="h-12 max-w-full" style={{ width: w }} aria-hidden="true">
+      {[8, 16, 24, 32, 40].map((y) => (
+        <line key={y} x1="2" x2={w - 2} y1={y} y2={y} className="stroke-slate-300 dark:stroke-slate-600" strokeWidth="1" />
+      ))}
+      <line x1="2" x2="2" y1="8" y2="40" className="stroke-slate-400" strokeWidth="1" />
+      <line x1={w - 5} x2={w - 5} y1="8" y2="40" className="stroke-slate-400" strokeWidth="1" />
+      <line x1={w - 2} x2={w - 2} y1="8" y2="40" className="stroke-slate-500" strokeWidth="2.5" />
+      {Array.from({ length: beats }, (_, k) => {
+        const done = k < value
+        const x = 24 + k * 26
+        return (
+          <ellipse
+            key={k}
+            cx={x}
+            cy="24"
+            rx="6.5"
+            ry="4.6"
+            transform={`rotate(-22 ${x} 24)`}
+            strokeWidth="1.8"
+            className={
+              done
+                ? met
+                  ? 'fill-brass-400 stroke-brass-500'
+                  : 'fill-slate-800 stroke-slate-800 dark:fill-slate-100 dark:stroke-slate-100'
+                : 'fill-none stroke-slate-400'
+            }
+          />
+        )
+      })}
     </svg>
   )
 }
@@ -63,7 +80,7 @@ function StreakDays({ days }: { days: string[] }) {
         <span
           key={c.key}
           title={c.label}
-          className={`aspect-square rounded-[3px] ${c.on ? 'bg-orange-500' : 'bg-slate-100 dark:bg-slate-800'}`}
+          className={`aspect-square rounded-[3px] ${c.on ? 'bg-brass-400' : 'bg-slate-100 dark:bg-slate-800'}`}
         />
       ))}
     </div>
@@ -82,14 +99,14 @@ function Badge({ a }: { a: Achievement }) {
     <div
       className={`flex h-full items-center gap-3 rounded-lg border p-2.5 text-start transition ${
         a.earned
-          ? 'border-amber-300 bg-amber-50 dark:border-amber-700/60 dark:bg-amber-950/30'
+          ? 'border-brass-300 bg-brass-300/15 dark:border-brass-500/50 dark:bg-brass-500/10'
           : 'border-slate-200 opacity-70 dark:border-slate-800'
       }`}
       title={tk(`ach.${a.id}_desc`, '')}
     >
       <span
         className={`grid h-9 w-9 shrink-0 place-items-center rounded-full ${
-          a.earned ? 'bg-amber-400 text-amber-950' : 'bg-slate-100 text-slate-400 dark:bg-slate-800'
+          a.earned ? 'bg-brass-400 text-slate-950' : 'bg-slate-100 text-slate-400 dark:bg-slate-800'
         }`}
       >
         <Icon name={a.earned ? (BADGE_ICON[a.id] ?? 'star') : 'lock'} size={18} />
@@ -118,31 +135,28 @@ export function GoalsPanel({ data, part }: { data: Achievements; part: 'goals' |
   return (
       <div className="grid gap-4 md:grid-cols-3">
         <div className={card}>
-          <div className="flex items-center gap-3">
-            <span className="grid h-11 w-11 place-items-center rounded-full bg-orange-100 text-orange-600 dark:bg-orange-950/50">
-              <Icon name="flame" size={24} />
-            </span>
-            <div>
-              <p className="text-3xl font-semibold tabular-nums">{data.streak.current}</p>
-              <p className="text-sm text-slate-500">{t('goal.streak_days')}</p>
-            </div>
-          </div>
+          <p className="flex items-baseline gap-2">
+            <span className="tempo text-4xl tabular-nums">{data.streak.current}</span>
+            <span className="text-sm text-slate-500">{t('goal.streak_days')}</span>
+          </p>
           <div className="mt-4">
             <StreakDays days={data.streak.days} />
           </div>
           <p className="mt-2 text-xs text-slate-500">{t('goal.best_streak', { n: data.streak.best })}</p>
         </div>
 
-        <div className={`${card} flex items-center gap-4`}>
-          <div className="relative">
-            <Ring value={data.week_sessions} goal={weekly ? Number(weekly.target) : 0} />
-            <span dir="ltr" className="absolute inset-0 grid place-items-center text-lg font-semibold tabular-nums">
+        <div className={card}>
+          <div className="flex items-baseline justify-between gap-2">
+            <p className="font-medium">{t('goal.this_week')}</p>
+            <bdi dir="ltr" className="text-sm font-semibold tabular-nums">
               {data.week_sessions}
-              {weekly && <span className="text-xs text-slate-400">/{weekly.target}</span>}
-            </span>
+              {weekly && <span className="font-normal text-slate-400"> / {weekly.target}</span>}
+            </bdi>
+          </div>
+          <div dir="ltr" className="my-2">
+            <Measure value={data.week_sessions} goal={weekly ? Number(weekly.target) : 0} />
           </div>
           <div>
-            <p className="font-medium">{t('goal.this_week')}</p>
             <p className="text-sm text-slate-500">
               {weekly ? (weekly.met ? t('goal.week_done') : t('goal.week_left', { n: Number(weekly.target) - data.week_sessions })) : t('goal.no_weekly')}
             </p>
@@ -164,11 +178,15 @@ export function GoalsPanel({ data, part }: { data: Achievements; part: 'goals' |
                 const { label, value } = goalText(g, t)
                 return (
                   <li key={g.id} className="flex items-center gap-2 text-sm">
-                    <span className={`grid h-5 w-5 place-items-center rounded-full ${g.met ? 'bg-emerald-500 text-white' : 'bg-slate-100 text-slate-400 dark:bg-slate-800'}`}>
-                      <Icon name="check" size={13} />
+                    <span
+                      className={`grid h-5 w-5 shrink-0 place-items-center rounded-full ${g.met ? 'bg-emerald-600 text-white' : g.current === null ? 'border border-slate-300 text-slate-400' : 'bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300'}`}
+                      title={t(g.met ? 'goal.met' : 'goal.not_met')}
+                    >
+                      <Icon name={g.met ? 'check' : 'cross'} size={12} />
                     </span>
                     <span className="flex-1">{label}</span>
-                    <span className="font-semibold tabular-nums">{value}</span>
+                    <span className={`font-semibold tabular-nums ${g.met || g.current === null ? '' : 'text-red-700 dark:text-red-300'}`}>{value}</span>
+                    <span className="sr-only">{t(g.met ? 'goal.met' : 'goal.not_met')}</span>
                   </li>
                 )
               })}

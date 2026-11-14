@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom'
 import { authApi, type Achievements, type Category, type Goals, type Progress, type SessionScores } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
 import { GoalsPanel } from '../components/GoalsPanel'
+import { Icon } from '../components/Icon'
+import { tempoMarking } from '../lib/tempo'
 import { TrendChart } from '../components/TrendChart'
 import { useI18n } from '../i18n'
 import type { MessageKey } from '../i18n/core'
@@ -202,6 +204,11 @@ export function DashboardPage() {
                   </>
                 )}
               </span>
+              {progress.sessions.at(-1)?.metrics?.wpm != null && (
+                <span dir="ltr" className="tempo text-slate-800 dark:text-slate-100">
+                  {tempoMarking(progress.sessions.at(-1)!.metrics!.wpm!)}
+                </span>
+              )}
               <span>
                 {t('dash.best')} <strong className="text-slate-900 tabular-nums dark:text-white">{progress.best !== null ? Math.round(progress.best) : '–'}</strong>
               </span>
@@ -252,7 +259,7 @@ export function DashboardPage() {
                     <p className={`text-2xl font-semibold tabular-nums ${scoreColor(v)}`}>{v !== null ? Math.round(v) : '–'}</p>
                     {delta !== null && delta !== undefined && (
                       <p className={`text-xs ${delta >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                        {delta >= 0 ? '▲' : '▼'} {t('dash.vs_average', { delta: Math.abs(delta).toFixed(0) })}
+                        <Icon name={delta >= 0 ? 'up' : 'down'} size={12} className="inline align-[-1px]" /> {t('dash.vs_average', { delta: Math.abs(delta).toFixed(0) })}
                       </p>
                     )}
                   </div>

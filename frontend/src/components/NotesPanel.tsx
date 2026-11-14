@@ -57,7 +57,7 @@ export function NotesPanel({ sessionId, notes, onChange, currentTime, onSeek, pa
         <button
           type="button"
           onClick={startNew}
-          className="rounded-md bg-fuchsia-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-fuchsia-700"
+          className="btn-quiet px-3 py-1.5"
         >
           {t('notes.add_at', { time: formatTime(currentTime) })}
         </button>
@@ -105,7 +105,7 @@ export function NotesPanel({ sessionId, notes, onChange, currentTime, onSeek, pa
         <ul className="mt-3 divide-y divide-slate-100 dark:divide-slate-800">
           {notes.map((n) => (
             <li key={n.id} className="group flex items-start gap-3 py-2">
-              <button type="button" onClick={() => onSeek(n.t)} className="font-mono text-xs text-fuchsia-600 hover:underline">
+              <button type="button" onClick={() => onSeek(n.t)} className="font-mono text-xs text-brand-600 hover:underline">
                 {formatTime(n.t)}
               </button>
               <p dir="auto" className="flex-1 whitespace-pre-wrap text-sm">

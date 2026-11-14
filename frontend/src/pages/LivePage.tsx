@@ -30,16 +30,16 @@ const OVERRUN_S = 30
 const CALIBRATION_S = 3
 const EYE_WINDOW = 150 // frames in the rolling eye-contact window (about 10 s)
 
-function wpmTone(wpm: number | null): string {
+function wpmTone(wpm: number | null, low = 110, high = 170): string {
   if (wpm === null) return 'text-slate-400'
-  if (wpm > 170 || wpm < 110) return 'text-amber-500'
-  return 'text-emerald-500'
+  if (wpm > high || wpm < low) return 'text-amber-600'
+  return 'text-emerald-600'
 }
 
-function wpmHint(wpm: number | null): MessageKey {
+function wpmHint(wpm: number | null, low = 110, high = 170): MessageKey {
   if (wpm === null) return 'live.pace_start'
-  if (wpm > 170) return 'live.pace_fast'
-  if (wpm < 110) return 'live.pace_slow'
+  if (wpm > high) return 'live.pace_fast'
+  if (wpm < low) return 'live.pace_slow'
   return 'live.pace_good'
 }
 
@@ -428,6 +428,8 @@ export function LivePage() {
   }
 
   const wpm = stats?.wpm_recent ?? null
+  const paceLow = user?.settings.goals?.wpm_low ?? 110
+  const paceHigh = user?.settings.goals?.wpm_high ?? 170
   const remaining = target !== null && mode !== 'interview' ? Math.max(0, target - elapsed) : null
   const light = phase === 'recording' ? lightAt(timingLights(mode, target), elapsed) : 'none'
   const LIGHT_CLASS = { none: '', green: 'bg-emerald-500', amber: 'bg-amber-400', red: 'bg-red-500' } as const
@@ -639,8 +641,8 @@ export function LivePage() {
         <aside className="space-y-4">
           <div className="card p-4">
             <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">{t('live.pace')}</p>
-            <PaceGauge wpm={wpm} />
-            <p className={`mt-1 text-center text-sm ${wpmTone(wpm)}`}>{t(wpmHint(wpm))}</p>
+            <PaceGauge wpm={wpm} low={paceLow} high={paceHigh} />
+            <p className={`mt-1 text-center text-sm ${wpmTone(wpm, paceLow, paceHigh)}`}>{t(wpmHint(wpm, paceLow, paceHigh))}</p>
           </div>
           <div className="card p-4">
             <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">{t('live.voice_level')}</p>

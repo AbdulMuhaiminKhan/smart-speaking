@@ -49,35 +49,45 @@ export function TrendChart({ points, label, band, yMin, yMax, format = (v) => St
           y={y(Math.min(band[1], hi))}
           width={W - L - R}
           height={Math.max(0, y(Math.max(band[0], lo)) - y(Math.min(band[1], hi)))}
-          className="fill-emerald-500/10"
+          className="fill-emerald-500/12"
         />
       )}
+      {/* Five staff lines across the range, a bar line per session. */}
+      {[0, 0.25, 0.5, 0.75, 1].map((f) => (
+        <line key={f} x1={L} x2={W - R} y1={y(lo + f * span)} y2={y(lo + f * span)} className="stroke-slate-300 dark:stroke-slate-700" strokeWidth={1} />
+      ))}
+      {points.map((p, i) => (
+        <line key={p.id} x1={x(i)} x2={x(i)} y1={y(hi)} y2={y(lo)} className="stroke-slate-200 dark:stroke-slate-800" strokeWidth={1} />
+      ))}
+      <line x1={W - R} x2={W - R} y1={y(hi)} y2={y(lo)} className="stroke-slate-500" strokeWidth={2.5} />
       {ticks.map((v) => (
-        <g key={v}>
-          <line x1={L} x2={W - R} y1={y(v)} y2={y(v)} className="stroke-slate-200 dark:stroke-slate-800" />
-          <text x={L - 6} y={y(v) + 4} textAnchor="end" fontSize={11} className="fill-slate-400">
-            {format(v)}
-          </text>
-        </g>
+        <text key={v} x={L - 8} y={y(v) + 4} textAnchor="end" fontSize={12} className="fill-slate-500">
+          {format(v)}
+        </text>
       ))}
-      <path d={d} fill="none" strokeWidth={2.5} strokeLinejoin="round" className="stroke-brand-600" />
-      {pts.map((p) => (
-        <circle
-          key={p.id}
-          cx={x(p.i)}
-          cy={y(p.value)}
-          r={5}
-          strokeWidth={2}
-          className="cursor-pointer fill-white stroke-brand-600 dark:fill-slate-900"
-          onClick={() => navigate(`/sessions/${p.id}`)}
-        >
-          <title>{`${p.title} · ${formatDate(p.date, false)}: ${format(p.value)}`}</title>
-        </circle>
-      ))}
-      <text x={L} y={H - 8} fontSize={11} className="fill-slate-400">
+      <path d={d} fill="none" strokeWidth={1.5} strokeLinejoin="round" className="stroke-slate-500" />
+      {pts.map((p, k) => {
+        const last = k === pts.length - 1
+        return (
+          <ellipse
+            key={p.id}
+            cx={x(p.i)}
+            cy={y(p.value)}
+            rx={8}
+            ry={5.6}
+            transform={`rotate(-22 ${x(p.i)} ${y(p.value)})`}
+            strokeWidth={2}
+            className={`cursor-pointer ${last ? 'fill-brand-600 stroke-brand-600' : 'fill-slate-800 stroke-slate-800 dark:fill-slate-100 dark:stroke-slate-100'} hover:fill-brand-500`}
+            onClick={() => navigate(`/sessions/${p.id}`)}
+          >
+            <title>{`${p.title} · ${formatDate(p.date, false)}: ${format(p.value)}`}</title>
+          </ellipse>
+        )
+      })}
+      <text x={L} y={H - 8} fontSize={12} className="fill-slate-500">
         {formatDate(points[0].date, false)}
       </text>
-      <text x={W - R} y={H - 8} fontSize={11} textAnchor="end" className="fill-slate-400">
+      <text x={W - R} y={H - 8} fontSize={12} textAnchor="end" className="fill-slate-500">
         {formatDate(points[n - 1].date, false)}
       </text>
     </svg>

@@ -20,7 +20,7 @@ const CATEGORY_COLORS: Record<Category, string> = {
 }
 
 // Staff positions from the top: lines on even steps, spaces on odd ones.
-const STEP = 7 // px between a line and the next space
+const STEP = 9 // px between a line and the next space
 const TOP = 30 // room for bar numbers and markers
 const POSITION: Record<Category, number> = {
   voice: 0,
@@ -41,7 +41,7 @@ export interface TimelineMarker {
 
 const MARKER_COLORS: Record<TimelineMarker['kind'], string> = {
   prompt: 'bg-brand-600',
-  note: 'bg-fuchsia-500',
+  note: 'bg-white ring-2 ring-slate-800 dark:bg-slate-900 dark:ring-slate-100',
 }
 
 interface Props {
@@ -124,7 +124,7 @@ export function VideoTimeline({ issues, markers = [], duration, currentTime, onS
                 e.stopPropagation()
                 onSeek(m.t)
               }}
-              className={`absolute top-3.5 h-3 w-3 -translate-x-1/2 rotate-45 rounded-[2px] ${MARKER_COLORS[m.kind]} transition-transform hover:scale-125`}
+              className={`absolute top-3.5 h-3 w-3 -translate-x-1/2 ${m.kind === 'prompt' ? 'rotate-45 rounded-[2px]' : 'rounded-[1px]'} ${MARKER_COLORS[m.kind]} transition-transform hover:scale-125`}
               style={{ left: pct(m.t) }}
             />
           ))}
