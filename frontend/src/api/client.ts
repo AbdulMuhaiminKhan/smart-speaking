@@ -278,6 +278,21 @@ export interface User {
   created_at: string
 }
 
+export interface SessionMetrics {
+  words: number
+  speaking_s: number
+  wpm: number | null
+  fillers_per_min: number | null
+  filler_count: number
+  clarity_pct: number | null
+  pitch_variation_st: number | null
+  monotone: boolean | null
+  pause_ratio: number | null
+  eye_contact_pct: number | null
+  gestures_per_min: number | null
+  script_coverage_pct: number | null
+}
+
 export interface SessionScores {
   id: string
   title: string
@@ -285,6 +300,9 @@ export interface SessionScores {
   duration_s: number | null
   overall: number | null
   categories: Partial<Record<Category, number | null>>
+  mode: SessionMode
+  language: Lang
+  metrics: SessionMetrics | null
 }
 
 export interface Progress {

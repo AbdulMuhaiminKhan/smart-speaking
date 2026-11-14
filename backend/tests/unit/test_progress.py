@@ -33,3 +33,22 @@ def test_summary_empty_and_single() -> None:
 def test_progress_endpoint_empty(client) -> None:  # type: ignore[no-untyped-def]
     res = client.get("/api/progress")
     assert res.status_code == 200 and res.json()["count"] == 0
+
+
+def test_session_summary_and_rebuild_for_old_sessions() -> None:
+    from app.pipeline import language, pacing, summary
+    from tests.helpers import transcript_from, words_from
+
+    words = words_from("Um hello everyone this is a short talk about um practice", probability=0.9)
+    words[3].probability = 0.2  # one unclear word
+    t = transcript_from(words)
+    p = pacing.run(t)
+    lang = language.run(t, speaking_time_s=p.speaking_time_s)
+    s = summary.build(t, p, lang, None, None)
+    assert s.filler_count == 2 and s.clarity_pct == 90.9 and s.eye_contact_pct is None
+
+    rebuilt = summary.from_results(
+        {"transcript": t.model_dump(), "pacing": p.model_dump(), "language": lang.model_dump()}
+    )
+    assert rebuilt == s
+    assert summary.from_results({"report": {}}) is None

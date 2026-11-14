@@ -27,6 +27,7 @@ def filler_prompt(language: str | None) -> str:
 
     return load_lexicon(language or "en").whisper_prompt or FILLER_PROMPT
 
+
 ProgressFn = Callable[[float], None]
 
 

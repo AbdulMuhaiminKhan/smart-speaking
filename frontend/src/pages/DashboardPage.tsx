@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { authApi, type Category, type Progress } from '../api/client'
+import { authApi, type Category, type Progress, type SessionScores } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
+import { TrendChart } from '../components/TrendChart'
 import { useI18n } from '../i18n'
+import type { MessageKey } from '../i18n/core'
 import { CATEGORY_ORDER, scoreColor } from '../lib/categories'
 import { errorText } from '../lib/errors'
+import { recentChange } from '../lib/trends'
 
 const card = 'rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900'
 
@@ -18,43 +21,139 @@ function Stat({ label, value, hint }: { label: string; value: string; hint?: str
   )
 }
 
-function ProgressChart({ progress, category }: { progress: Progress; category: Category | 'overall' }) {
-  const { t, formatDate } = useI18n()
-  const pts = progress.sessions
-    .map((s, i) => ({ i, s, v: category === 'overall' ? s.overall : (s.categories[category] ?? null) }))
-    .filter((p): p is typeof p & { v: number } => p.v !== null && p.v !== undefined)
-  if (pts.length < 2) {
-    return <p className="py-10 text-center text-sm text-slate-500">{t('dash.need_two')}</p>
+type Metric = 'score' | 'fillers' | 'wpm' | 'clarity'
+
+interface MetricDef {
+  label: MessageKey
+  unit: MessageKey
+  value: (s: SessionScores, category: Category | 'overall') => number | null
+  band?: [number, number]
+  yMin?: number
+  yMax?: number
+  digits: number
+  lowerIsBetter?: boolean
+}
+
+const METRICS: Record<Metric, MetricDef> = {
+  score: {
+    label: 'trend.score',
+    unit: 'trend.score_unit',
+    value: (s, c) => (c === 'overall' ? s.overall : (s.categories[c] ?? null)),
+    band: [80, 100],
+    yMin: 0,
+    yMax: 100,
+    digits: 0,
+  },
+  fillers: {
+    label: 'trend.fillers',
+    unit: 'trend.fillers_unit',
+    value: (s) => s.metrics?.fillers_per_min ?? null,
+    band: [0, 3],
+    yMin: 0,
+    digits: 1,
+    lowerIsBetter: true,
+  },
+  wpm: {
+    label: 'trend.wpm',
+    unit: 'trend.wpm_unit',
+    value: (s) => s.metrics?.wpm ?? null,
+    band: [120, 160],
+    digits: 0,
+  },
+  clarity: {
+    label: 'trend.clarity',
+    unit: 'trend.clarity_unit',
+    value: (s) => s.metrics?.clarity_pct ?? null,
+    band: [90, 100],
+    yMax: 100,
+    digits: 0,
+  },
+}
+
+function Trends({ progress }: { progress: Progress }) {
+  const { t } = useI18n()
+  const [metric, setMetric] = useState<Metric>('score')
+  const [category, setCategory] = useState<Category | 'overall'>('overall')
+  const def = METRICS[metric]
+  const values = progress.sessions.map((s) => def.value(s, category))
+  const fmt = (v: number) => v.toFixed(def.digits)
+  const change = recentChange(values)
+
+  let direction: 'better' | 'worse' | 'same' = 'same'
+  if (change) {
+    const delta = change.recent - change.before
+    const inBand = (v: number) => !def.band || (v >= def.band[0] && v <= def.band[1])
+    if (metric === 'wpm') {
+      // For pace, closer to the comfortable range is better.
+      const dist = (v: number) => (inBand(v) ? 0 : Math.min(Math.abs(v - def.band![0]), Math.abs(v - def.band![1])))
+      const d = dist(change.recent) - dist(change.before)
+      direction = Math.abs(d) < 3 ? 'same' : d < 0 ? 'better' : 'worse'
+    } else {
+      const threshold = metric === 'fillers' ? 0.3 : 2
+      direction = Math.abs(delta) < threshold ? 'same' : (delta < 0) === !!def.lowerIsBetter ? 'better' : 'worse'
+    }
   }
-  const W = 640
-  const H = 200
-  const L = 36
-  const R = 16
-  const T = 12
-  const B = 28
-  const n = progress.sessions.length
-  const x = (i: number) => L + (i / Math.max(1, n - 1)) * (W - L - R)
-  const y = (v: number) => T + (1 - v / 100) * (H - T - B)
-  const d = pts.map((p, k) => `${k ? 'L' : 'M'}${x(p.i).toFixed(1)} ${y(p.v).toFixed(1)}`).join(' ')
+
   return (
-    <svg direction="ltr" viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label={t('dash.chart_label')}>
-      {[0, 50, 80, 100].map((v) => (
-        <g key={v}>
-          <line x1={L} x2={W - R} y1={y(v)} y2={y(v)} className="stroke-slate-200 dark:stroke-slate-800" strokeDasharray={v === 80 ? '4 4' : undefined} />
-          <text x={L - 6} y={y(v) + 4} textAnchor="end" fontSize={11} className="fill-slate-400">{v}</text>
-        </g>
-      ))}
-      <path d={d} fill="none" strokeWidth={2.5} className="stroke-brand-600" />
-      {pts.map((p) => (
-        <Link key={p.s.id} to={`/sessions/${p.s.id}`}>
-          <circle cx={x(p.i)} cy={y(p.v)} r={5} className="fill-white stroke-brand-600 dark:fill-slate-900" strokeWidth={2}>
-            <title>{`${p.s.title}: ${Math.round(p.v)}`}</title>
-          </circle>
-        </Link>
-      ))}
-      <text x={L} y={H - 8} fontSize={11} className="fill-slate-400">{formatDate(progress.sessions[0].created_at, false)}</text>
-      <text x={W - R} y={H - 8} fontSize={11} textAnchor="end" className="fill-slate-400">{formatDate(progress.sessions[n - 1].created_at, false)}</text>
-    </svg>
+    <div className={card}>
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <h2 className="font-semibold">{t('dash.trends')}</h2>
+        <div className="flex flex-wrap items-center gap-1" role="tablist">
+          {(Object.keys(METRICS) as Metric[]).map((m) => (
+            <button
+              key={m}
+              type="button"
+              role="tab"
+              aria-selected={metric === m}
+              onClick={() => setMetric(m)}
+              className={`rounded-md px-3 py-1 text-sm ${
+                metric === m ? 'bg-brand-600 text-white' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
+              }`}
+            >
+              {t(METRICS[m].label)}
+            </button>
+          ))}
+          {metric === 'score' && (
+            <select
+              value={category}
+              onChange={(e) => setCategory(e.target.value as Category | 'overall')}
+              className="ms-1 rounded-md border border-slate-300 bg-transparent px-2 py-1 text-sm dark:border-slate-700"
+              aria-label={t('dash.score_to_show')}
+            >
+              <option value="overall">{t('dash.overall')}</option>
+              {CATEGORY_ORDER.map((c) => (
+                <option key={c} value={c}>
+                  {t(`cat.${c}`)}
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
+      </div>
+      <TrendChart
+        points={progress.sessions.map((s, i) => ({ id: s.id, title: s.title, date: s.created_at, value: values[i] }))}
+        label={t(def.unit)}
+        band={def.band}
+        yMin={def.yMin}
+        yMax={def.yMax}
+        format={fmt}
+      />
+      <div className="mt-2 flex flex-wrap items-baseline justify-between gap-2 text-xs text-slate-500">
+        <span>
+          {t(def.unit)} · {t('trend.target_band')}
+          {metric === 'clarity' && ` · ${t('trend.clarity_note')}`}
+        </span>
+        {change && (
+          <span
+            className={
+              direction === 'better' ? 'text-emerald-600' : direction === 'worse' ? 'text-red-600' : 'text-slate-500'
+            }
+          >
+            {t('trend.recent', { recent: fmt(change.recent), before: fmt(change.before) })} · {t(`trend.${direction}`)}
+          </span>
+        )}
+      </div>
+    </div>
   )
 }
 
@@ -62,11 +161,13 @@ export function DashboardPage() {
   const { user } = useAuth()
   const [progress, setProgress] = useState<Progress | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [category, setCategory] = useState<Category | 'overall'>('overall')
   const { t } = useI18n()
 
   useEffect(() => {
-    authApi.progress().then(setProgress).catch((e: unknown) => setError(errorText(e, t, 'err.load_progress')))
+    authApi
+      .progress()
+      .then(setProgress)
+      .catch((e: unknown) => setError(errorText(e, t, 'err.load_progress')))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -81,8 +182,12 @@ export function DashboardPage() {
           <p className="text-slate-600 dark:text-slate-400">{t('dash.subtitle')}</p>
         </div>
         <div className="flex gap-2">
-          <Link to="/live" className="rounded-md bg-brand-600 px-4 py-2 font-medium text-white hover:bg-brand-700">{t('dash.practice_live')}</Link>
-          <Link to="/upload" className="rounded-md border border-slate-300 px-4 py-2 font-medium dark:border-slate-700">{t('dash.upload_video')}</Link>
+          <Link to="/live" className="rounded-md bg-brand-600 px-4 py-2 font-medium text-white hover:bg-brand-700">
+            {t('dash.practice_live')}
+          </Link>
+          <Link to="/upload" className="rounded-md border border-slate-300 px-4 py-2 font-medium dark:border-slate-700">
+            {t('dash.upload_video')}
+          </Link>
         </div>
       </div>
 
@@ -100,29 +205,16 @@ export function DashboardPage() {
         <>
           <div className="grid gap-4 sm:grid-cols-4">
             <Stat label={t('dash.sessions')} value={String(progress.count)} />
-            <Stat label={t('dash.latest')} value={progress.latest !== null ? String(Math.round(progress.latest)) : '–'} hint={change !== null ? t('dash.vs_previous', { delta: `${change >= 0 ? '+' : ''}${change}` }) : undefined} />
+            <Stat
+              label={t('dash.latest')}
+              value={progress.latest !== null ? String(Math.round(progress.latest)) : '–'}
+              hint={change !== null ? t('dash.vs_previous', { delta: `${change >= 0 ? '+' : ''}${change}` }) : undefined}
+            />
             <Stat label={t('dash.best')} value={progress.best !== null ? String(Math.round(progress.best)) : '–'} />
             <Stat label={t('dash.average')} value={progress.average !== null ? String(Math.round(progress.average)) : '–'} />
           </div>
 
-          <div className={card}>
-            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-              <h2 className="font-semibold">{t('dash.progress')}</h2>
-              <select
-                value={category}
-                onChange={(e) => setCategory(e.target.value as Category | 'overall')}
-                className="rounded-md border border-slate-300 bg-transparent px-2 py-1 text-sm dark:border-slate-700"
-                aria-label={t('dash.score_to_show')}
-              >
-                <option value="overall">{t('dash.overall')}</option>
-                {CATEGORY_ORDER.map((c) => (
-                  <option key={c} value={c}>{t(`cat.${c}`)}</option>
-                ))}
-              </select>
-            </div>
-            <ProgressChart progress={progress} category={category} />
-            <p className="text-xs text-slate-500">{t('dash.chart_note')}</p>
-          </div>
+          <Trends progress={progress} />
 
           <div className={card}>
             <h2 className="mb-3 font-semibold">{t('dash.by_category')}</h2>
@@ -148,17 +240,29 @@ export function DashboardPage() {
           <div className={card}>
             <div className="mb-2 flex items-center justify-between">
               <h2 className="font-semibold">{t('dash.recent')}</h2>
-              <Link to="/sessions" className="text-sm text-brand-600">{t('dash.see_all')}</Link>
+              <Link to="/sessions" className="text-sm text-brand-600">
+                {t('dash.see_all')}
+              </Link>
             </div>
             <ul className="divide-y divide-slate-100 dark:divide-slate-800">
-              {[...progress.sessions].reverse().slice(0, 5).map((s) => (
-                <li key={s.id}>
-                  <Link to={`/sessions/${s.id}`} className="flex items-center justify-between py-2 hover:text-brand-600">
-                    <span>{s.title}</span>
-                    <span className={`font-semibold tabular-nums ${scoreColor(s.overall)}`}>{s.overall !== null ? Math.round(s.overall) : '–'}</span>
-                  </Link>
-                </li>
-              ))}
+              {[...progress.sessions]
+                .reverse()
+                .slice(0, 5)
+                .map((s) => (
+                  <li key={s.id}>
+                    <Link to={`/sessions/${s.id}`} className="flex items-center justify-between gap-3 py-2 hover:text-brand-600">
+                      <span className="flex-1">{s.title}</span>
+                      {s.metrics?.wpm != null && (
+                        <span className="hidden text-xs text-slate-500 sm:inline">
+                          {Math.round(s.metrics.wpm)} {t('common.wpm')} · {t('trend.fillers_short', { n: (s.metrics.fillers_per_min ?? 0).toFixed(1) })}
+                        </span>
+                      )}
+                      <span className={`font-semibold tabular-nums ${scoreColor(s.overall)}`}>
+                        {s.overall !== null ? Math.round(s.overall) : '–'}
+                      </span>
+                    </Link>
+                  </li>
+                ))}
             </ul>
           </div>
         </>

@@ -27,6 +27,7 @@ from app.pipeline import (
     report,
     report_llm,
     scoring,
+    summary,
     transcribe,
     voice,
     voice_emotion,
@@ -190,6 +191,9 @@ def analyze_session(session_id: str) -> None:
                         ]
                 except Exception:
                     log.exception("body analysis failed for session %s", session_id)
+
+            summary_m = summary.build(transcript, pacing_m, language_m, voice_m, body_m)
+            save_result(db, sid, "summary", summary_m.model_dump())
 
             progress.stage("report")
             not_scored = scoring.body_not_scored(body_m, info.has_video)

@@ -312,9 +312,7 @@ def analyze(
             exp = exp_phones[k]
             prev = seg_words[k - 1].text if k else ""
             # German capitalizes every noun, so a capital letter does not mark a name.
-            starts = (
-                k == 0 or prev.rstrip("\"')").endswith((".", "?", "!")) or language == "de"
-            )
+            starts = k == 0 or prev.rstrip("\"')").endswith((".", "?", "!")) or language == "de"
             if not checkable(w, norm, skip, starts) or len(exp) < MIN_PHONES:
                 continue
             checked += 1

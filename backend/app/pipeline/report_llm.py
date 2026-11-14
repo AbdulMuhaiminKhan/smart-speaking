@@ -65,12 +65,12 @@ def system_prompt(language: str = "en") -> str:
     extra = (
         f"\n- Write every text field in {name}. The facts are in English; translate them, "
         "keeping every number exactly as written (Western digits)."
-        "\n- Keep the transcript quote in \"original\" exactly as spoken, in its own language."
+        '\n- Keep the transcript quote in "original" exactly as spoken, in its own language.'
     )
     if language == "ur":
-        extra += "\n- Use Urdu script (not Roman Urdu) and a respectful \"آپ\" form."
+        extra += '\n- Use Urdu script (not Roman Urdu) and a respectful "آپ" form.'
     elif language == "de":
-        extra += "\n- Address the speaker informally with \"du\"."
+        extra += '\n- Address the speaker informally with "du".'
     return SYSTEM_PROMPT + extra
 
 

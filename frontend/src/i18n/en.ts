@@ -350,6 +350,22 @@ export const en = {
   'settings.confirm_delete': 'Delete your account, every recording and every report? This cannot be undone.',
   'settings.delete_failed': 'Could not delete the account.',
   'settings.signed_in_as': 'Signed in as {email}',
+  'dash.trends': 'Trends',
+  'trend.score': 'Score',
+  'trend.score_unit': 'Score out of 100',
+  'trend.fillers': 'Filler words',
+  'trend.fillers_unit': 'Filler words per minute',
+  'trend.fillers_short': '{n} fillers/min',
+  'trend.wpm': 'Pace',
+  'trend.wpm_unit': 'Words per minute',
+  'trend.clarity': 'Clarity',
+  'trend.clarity_unit': 'Words heard clearly (%)',
+  'trend.clarity_note': 'Clarity is the share of your words the speech model heard with confidence.',
+  'trend.target_band': 'green band: target range',
+  'trend.recent': 'Recent sessions: {recent} (before: {before})',
+  'trend.better': 'improving',
+  'trend.worse': 'slipping',
+  'trend.same': 'steady',
 } as const
 
 export type MessageKey = keyof typeof en
