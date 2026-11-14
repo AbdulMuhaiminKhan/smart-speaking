@@ -43,7 +43,7 @@ export function SessionPage() {
   const [currentTime, setCurrentTime] = useState(0)
   const [notes, setNotes] = useState<Note[]>([])
   const [rate, setRate] = useState(1)
-  const { t, tk, formatDate } = useI18n()
+  const { t, tk, formatDate, lang } = useI18n()
 
   const load = useCallback(async () => {
     try {
@@ -153,7 +153,7 @@ export function SessionPage() {
         <div className="flex gap-2">
           {session.status === 'completed' && (
             <a
-              href={reportApi.pdfUrl(id)}
+              href={reportApi.pdfUrl(id, lang)}
               className="rounded-md bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700"
             >
               {t('session.export_pdf')}

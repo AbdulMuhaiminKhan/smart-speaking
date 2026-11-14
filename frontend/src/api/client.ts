@@ -334,7 +334,7 @@ export const reportApi = {
   getVoice: (id: string) => optional(request<VoiceResult>(`/api/sessions/${id}/results/voice`)),
   getBody: (id: string) => optional(request<BodyResult>(`/api/sessions/${id}/results/body`)),
   getVoiceEmotion: (id: string) => optional(request<VoiceEmotionResult>(`/api/sessions/${id}/results/voice_emotion`)),
-  pdfUrl: (id: string) => `/api/sessions/${id}/report.pdf`,
+  pdfUrl: (id: string, lang?: string) => `/api/sessions/${id}/report.pdf${lang ? `?lang=${lang}` : ''}`,
 }
 
 // ---- Accounts and progress (Phase 6) ----

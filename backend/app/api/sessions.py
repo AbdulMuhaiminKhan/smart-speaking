@@ -174,7 +174,9 @@ def get_media(session_id: uuid.UUID, db: DbDep, user: UserDep) -> FileResponse:
 
 
 @router.get("/{session_id}/report.pdf")
-def get_report_pdf(session_id: uuid.UUID, db: DbDep, user: UserDep) -> Response:
+def get_report_pdf(
+    session_id: uuid.UUID, db: DbDep, user: UserDep, lang: str | None = None
+) -> Response:
     from app.pipeline.report import Report
     from app.schemas.transcript import Transcript
     from app.services import pdf
@@ -189,13 +191,20 @@ def get_report_pdf(session_id: uuid.UUID, db: DbDep, user: UserDep) -> Response:
     html = pdf.render_html(
         Report.model_validate(results["report"]),
         title=ps.title,
-        created=ps.created_at.strftime("%d %b %Y, %H:%M"),
+        created=ps.created_at.strftime("%d.%m.%Y, %H:%M"),
         duration_s=ps.duration_s,
         transcript_text=transcript.text if transcript else "",
         pacing=results.get("pacing"),
         voice=results.get("voice"),
         body=results.get("body"),
         voice_emotion=results.get("voice_emotion"),
+        lang=lang or (user.settings or {}).get("ui_language") or "en",
+        mode=ps.mode.value,
+        target_seconds=ps.target_seconds,
+        prompts=ps.prompts,
+        notes=[{"t": n.t, "text": n.text} for n in ps.annotations],
+        language_result=results.get("language"),
+        summary=results.get("summary"),
     )
     safe = "".join(c if c.isalnum() or c in " -_" else "_" for c in ps.title).strip() or "report"
     return Response(
