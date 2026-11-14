@@ -109,6 +109,10 @@ input, textarea, select {
   font-family: "Noto Nastaliq Urdu", "Jameel Noori Nastaleeq", "Urdu Typesetting", "Noto Naskh Arabic", var(--font-sans);
   line-height: 1.9;
 }
+:lang(ur) select,
+:lang(ur) input {
+  line-height: 1.3;
+}
 :lang(ur) .font-mono,
 :lang(ur) .tabular-nums {
   font-family: var(--font-sans);
