@@ -311,6 +311,7 @@ class Report(BaseModel):
     llm_model: str | None = None
     llm_error: str | None = None  # why the AI coach was not used, if it was not
     llm_items_dropped: int = 0  # AI statements rejected for not matching the metrics
+    language: str = "en"  # language the coaching text is written in
     summary: str | None = None
     clarity: Clarity | None = None
     overall: float | None

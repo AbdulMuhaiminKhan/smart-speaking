@@ -9,6 +9,7 @@ import logging
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
 from app.config import get_settings
+from app.pipeline.language import SUPPORTED_LANGUAGES
 from app.services.live import LiveTranscriber, whisper_transcribe_fn
 
 log = logging.getLogger(__name__)
@@ -32,6 +33,8 @@ async def live_ws(ws: WebSocket, lang: str = "en") -> None:
         await ws.close(code=4401, reason="not signed in")
         return
     await ws.accept()
+    if lang not in SUPPORTED_LANGUAGES:
+        lang = "en"
     settings = get_settings()
     loop = asyncio.get_running_loop()
     try:

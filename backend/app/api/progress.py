@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
+from typing import Any
 
 from fastapi import APIRouter
 from pydantic import BaseModel
@@ -11,6 +12,10 @@ from sqlalchemy import select
 
 from app.api.deps import DbDep, UserDep
 from app.db.models import AnalysisResult, PracticeSession, SessionStatus
+from app.pipeline.summary import SessionSummary, from_results
+
+# Steps needed to rebuild a summary for sessions analyzed before summaries existed.
+SUMMARY_STEPS = ("report", "summary", "transcript", "pacing", "language", "voice", "body")
 
 router = APIRouter(prefix="/api/progress", tags=["progress"])
 
@@ -22,6 +27,9 @@ class SessionScores(BaseModel):
     duration_s: float | None
     overall: float | None
     categories: dict[str, float | None]
+    mode: str = "free_talk"
+    language: str = "en"
+    metrics: SessionSummary | None = None
 
 
 class Progress(BaseModel):
@@ -59,26 +67,57 @@ def summarize(rows: list[SessionScores]) -> Progress:
 
 @router.get("", response_model=Progress)
 def progress(db: DbDep, user: UserDep) -> Progress:
-    q = (
-        select(PracticeSession, AnalysisResult.data)
-        .join(
-            AnalysisResult,
-            (AnalysisResult.session_id == PracticeSession.id) & (AnalysisResult.step == "report"),
-        )
+    return summarize(session_rows(db, user.id))
+
+
+def session_rows(db: DbDep, user_id: uuid.UUID) -> list[SessionScores]:
+    """Completed sessions with a report, oldest first, with their headline metrics."""
+    sessions = db.scalars(
+        select(PracticeSession)
         .where(
-            PracticeSession.user_id == user.id, PracticeSession.status == SessionStatus.completed
+            PracticeSession.user_id == user_id, PracticeSession.status == SessionStatus.completed
         )
         .order_by(PracticeSession.created_at)
-    )
-    rows = [
-        SessionScores(
-            id=ps.id,
-            title=ps.title,
-            created_at=ps.created_at,
-            duration_s=ps.duration_s,
-            overall=data.get("overall"),
-            categories={k: v.get("score") for k, v in data["scores"]["categories"].items()},
+    ).all()
+    ids = [ps.id for ps in sessions]
+    results: dict[uuid.UUID, dict[str, dict[str, Any]]] = {i: {} for i in ids}
+    if ids:
+        for r in db.scalars(
+            select(AnalysisResult).where(
+                AnalysisResult.session_id.in_(ids), AnalysisResult.step.in_(SUMMARY_STEPS)
+            )
+        ):
+            results[r.session_id][r.step] = r.data
+    rows: list[SessionScores] = []
+    for ps in sessions:
+        res = results[ps.id]
+        report = res.get("report")
+        if report is None:
+            continue
+        rows.append(
+            SessionScores(
+                id=ps.id,
+                title=ps.title,
+                created_at=ps.created_at,
+                duration_s=ps.duration_s,
+                overall=report.get("overall"),
+                categories={k: v.get("score") for k, v in report["scores"]["categories"].items()},
+                mode=ps.mode.value,
+                language=ps.language,
+                metrics=from_results(res),
+            )
         )
-        for ps, data in db.execute(q).all()
-    ]
-    return summarize(rows)
+    return rows
+
+
+@router.get("/achievements")
+def achievements(db: DbDep, user: UserDep, tz: str | None = None) -> dict[str, Any]:
+    """Streak, weekly goal progress and achievements. `tz` is an IANA zone like Europe/Berlin."""
+    from datetime import UTC
+
+    from app.schemas.user import UserSettings
+    from app.services.achievements import compute, tz_or_utc
+
+    goals = UserSettings.model_validate(user.settings or {}).goals
+    rows = session_rows(db, user.id)
+    return compute(rows, goals, tz_or_utc(tz), datetime.now(UTC)).model_dump(mode="json")

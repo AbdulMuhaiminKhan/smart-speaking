@@ -1,0 +1,614 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-14T14:01:45.229175+00:00",
+  "title": "Design System: SmartSpeaking",
+  "extensions": {
+    "colorMeta": {
+      "conductor-blue": {
+        "role": "primary",
+        "displayName": "Conductor Blue",
+        "tonalRamp": [
+          "oklch(0.3 0.12 266)",
+          "oklch(0.42 0.17 265)",
+          "oklch(0.5 0.19 264)",
+          "oklch(0.58 0.18 263)",
+          "oklch(0.68 0.14 262)",
+          "oklch(0.82 0.08 262)",
+          "oklch(0.93 0.04 262)",
+          "oklch(0.97 0.018 262)"
+        ]
+      },
+      "conductor-blue-deep": {
+        "role": "primary",
+        "displayName": "Conductor Blue Deep",
+        "tonalRamp": [
+          "oklch(0.3 0.12 266)",
+          "oklch(0.42 0.17 265)",
+          "oklch(0.5 0.19 264)",
+          "oklch(0.58 0.18 263)",
+          "oklch(0.68 0.14 262)",
+          "oklch(0.82 0.08 262)",
+          "oklch(0.93 0.04 262)",
+          "oklch(0.97 0.018 262)"
+        ]
+      },
+      "conductor-blue-bright": {
+        "role": "primary",
+        "displayName": "Conductor Blue Bright",
+        "tonalRamp": [
+          "oklch(0.3 0.12 266)",
+          "oklch(0.42 0.17 265)",
+          "oklch(0.5 0.19 264)",
+          "oklch(0.58 0.18 263)",
+          "oklch(0.68 0.14 262)",
+          "oklch(0.82 0.08 262)",
+          "oklch(0.93 0.04 262)",
+          "oklch(0.97 0.018 262)"
+        ]
+      },
+      "conductor-blue-wash": {
+        "role": "primary",
+        "displayName": "Conductor Blue Wash",
+        "tonalRamp": [
+          "oklch(0.3 0.12 266)",
+          "oklch(0.42 0.17 265)",
+          "oklch(0.5 0.19 264)",
+          "oklch(0.58 0.18 263)",
+          "oklch(0.68 0.14 262)",
+          "oklch(0.82 0.08 262)",
+          "oklch(0.93 0.04 262)",
+          "oklch(0.97 0.018 262)"
+        ]
+      },
+      "score-navy": {
+        "role": "secondary",
+        "displayName": "Score Navy",
+        "tonalRamp": [
+          "oklch(0.18 0.05 268)",
+          "oklch(0.22 0.06 268)",
+          "oklch(0.28 0.07 267)",
+          "oklch(0.35 0.08 266)",
+          "oklch(0.55 0.07 264)",
+          "oklch(0.75 0.06 263)",
+          "oklch(0.86 0.05 262)",
+          "oklch(0.93 0.03 262)"
+        ]
+      },
+      "score-navy-raised": {
+        "role": "secondary",
+        "displayName": "Score Navy Raised",
+        "tonalRamp": [
+          "oklch(0.18 0.05 268)",
+          "oklch(0.22 0.06 268)",
+          "oklch(0.28 0.07 267)",
+          "oklch(0.35 0.08 266)",
+          "oklch(0.55 0.07 264)",
+          "oklch(0.75 0.06 263)",
+          "oklch(0.86 0.05 262)",
+          "oklch(0.93 0.03 262)"
+        ]
+      },
+      "score-mist": {
+        "role": "secondary",
+        "displayName": "Score Mist",
+        "tonalRamp": [
+          "oklch(0.18 0.05 268)",
+          "oklch(0.22 0.06 268)",
+          "oklch(0.28 0.07 267)",
+          "oklch(0.35 0.08 266)",
+          "oklch(0.55 0.07 264)",
+          "oklch(0.75 0.06 263)",
+          "oklch(0.86 0.05 262)",
+          "oklch(0.93 0.03 262)"
+        ]
+      },
+      "score-mist-light": {
+        "role": "secondary",
+        "displayName": "Score Mist Light",
+        "tonalRamp": [
+          "oklch(0.18 0.05 268)",
+          "oklch(0.22 0.06 268)",
+          "oklch(0.28 0.07 267)",
+          "oklch(0.35 0.08 266)",
+          "oklch(0.55 0.07 264)",
+          "oklch(0.75 0.06 263)",
+          "oklch(0.86 0.05 262)",
+          "oklch(0.93 0.03 262)"
+        ]
+      },
+      "brass": {
+        "role": "tertiary",
+        "displayName": "Brass",
+        "tonalRamp": [
+          "oklch(0.4 0.09 70)",
+          "oklch(0.52 0.12 71)",
+          "oklch(0.62 0.14 72)",
+          "oklch(0.72 0.15 72)",
+          "oklch(0.8 0.14 80)",
+          "oklch(0.86 0.11 85)",
+          "oklch(0.92 0.07 88)",
+          "oklch(0.96 0.035 90)"
+        ]
+      },
+      "brass-deep": {
+        "role": "tertiary",
+        "displayName": "Brass Deep",
+        "tonalRamp": [
+          "oklch(0.4 0.09 70)",
+          "oklch(0.52 0.12 71)",
+          "oklch(0.62 0.14 72)",
+          "oklch(0.72 0.15 72)",
+          "oklch(0.8 0.14 80)",
+          "oklch(0.86 0.11 85)",
+          "oklch(0.92 0.07 88)",
+          "oklch(0.96 0.035 90)"
+        ]
+      },
+      "brass-light": {
+        "role": "tertiary",
+        "displayName": "Brass Light",
+        "tonalRamp": [
+          "oklch(0.4 0.09 70)",
+          "oklch(0.52 0.12 71)",
+          "oklch(0.62 0.14 72)",
+          "oklch(0.72 0.15 72)",
+          "oklch(0.8 0.14 80)",
+          "oklch(0.86 0.11 85)",
+          "oklch(0.92 0.07 88)",
+          "oklch(0.96 0.035 90)"
+        ]
+      },
+      "paper": {
+        "role": "neutral",
+        "displayName": "Paper",
+        "tonalRamp": [
+          "oklch(0.16 0.032 266)",
+          "oklch(0.21 0.034 265)",
+          "oklch(0.27 0.032 263)",
+          "oklch(0.36 0.03 261)",
+          "oklch(0.45 0.028 260)",
+          "oklch(0.55 0.025 259)",
+          "oklch(0.84 0.018 257)",
+          "oklch(0.955 0.01 255)"
+        ]
+      },
+      "sheet": {
+        "role": "neutral",
+        "displayName": "Sheet",
+        "tonalRamp": [
+          "oklch(0.16 0.032 266)",
+          "oklch(0.21 0.034 265)",
+          "oklch(0.27 0.032 263)",
+          "oklch(0.36 0.03 261)",
+          "oklch(0.45 0.028 260)",
+          "oklch(0.55 0.025 259)",
+          "oklch(0.84 0.018 257)",
+          "oklch(0.955 0.01 255)"
+        ],
+        "note": "Dark mode sheet is ink (oklch(0.21 0.034 265)) on an ink-night ground."
+      },
+      "hairline": {
+        "role": "neutral",
+        "displayName": "Hairline",
+        "tonalRamp": [
+          "oklch(0.16 0.032 266)",
+          "oklch(0.21 0.034 265)",
+          "oklch(0.27 0.032 263)",
+          "oklch(0.36 0.03 261)",
+          "oklch(0.45 0.028 260)",
+          "oklch(0.55 0.025 259)",
+          "oklch(0.84 0.018 257)",
+          "oklch(0.955 0.01 255)"
+        ]
+      },
+      "rule": {
+        "role": "neutral",
+        "displayName": "Rule",
+        "tonalRamp": [
+          "oklch(0.16 0.032 266)",
+          "oklch(0.21 0.034 265)",
+          "oklch(0.27 0.032 263)",
+          "oklch(0.36 0.03 261)",
+          "oklch(0.45 0.028 260)",
+          "oklch(0.55 0.025 259)",
+          "oklch(0.84 0.018 257)",
+          "oklch(0.955 0.01 255)"
+        ]
+      },
+      "ink-muted": {
+        "role": "neutral",
+        "displayName": "Ink Muted",
+        "tonalRamp": [
+          "oklch(0.16 0.032 266)",
+          "oklch(0.21 0.034 265)",
+          "oklch(0.27 0.032 263)",
+          "oklch(0.36 0.03 261)",
+          "oklch(0.45 0.028 260)",
+          "oklch(0.55 0.025 259)",
+          "oklch(0.84 0.018 257)",
+          "oklch(0.955 0.01 255)"
+        ]
+      },
+      "ink-soft": {
+        "role": "neutral",
+        "displayName": "Ink Soft",
+        "tonalRamp": [
+          "oklch(0.16 0.032 266)",
+          "oklch(0.21 0.034 265)",
+          "oklch(0.27 0.032 263)",
+          "oklch(0.36 0.03 261)",
+          "oklch(0.45 0.028 260)",
+          "oklch(0.55 0.025 259)",
+          "oklch(0.84 0.018 257)",
+          "oklch(0.955 0.01 255)"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "tonalRamp": [
+          "oklch(0.16 0.032 266)",
+          "oklch(0.21 0.034 265)",
+          "oklch(0.27 0.032 263)",
+          "oklch(0.36 0.03 261)",
+          "oklch(0.45 0.028 260)",
+          "oklch(0.55 0.025 259)",
+          "oklch(0.84 0.018 257)",
+          "oklch(0.955 0.01 255)"
+        ]
+      },
+      "ink-night": {
+        "role": "neutral",
+        "displayName": "Ink Night",
+        "tonalRamp": [
+          "oklch(0.16 0.032 266)",
+          "oklch(0.21 0.034 265)",
+          "oklch(0.27 0.032 263)",
+          "oklch(0.36 0.03 261)",
+          "oklch(0.45 0.028 260)",
+          "oklch(0.55 0.025 259)",
+          "oklch(0.84 0.018 257)",
+          "oklch(0.955 0.01 255)"
+        ]
+      },
+      "voice-violet": {
+        "role": "category",
+        "displayName": "Voice Violet",
+        "tonalRamp": [
+          "oklch(0.15 0.112 293)",
+          "oklch(0.27 0.168 293)",
+          "oklch(0.39 0.238 293)",
+          "oklch(0.5 0.28 293)",
+          "oklch(0.62 0.28 293)",
+          "oklch(0.74 0.224 293)",
+          "oklch(0.86 0.14 293)",
+          "oklch(0.95 0.056 293)"
+        ]
+      },
+      "pacing-sky": {
+        "role": "category",
+        "displayName": "Pacing Sky",
+        "tonalRamp": [
+          "oklch(0.15 0.064 242)",
+          "oklch(0.27 0.096 242)",
+          "oklch(0.39 0.136 242)",
+          "oklch(0.5 0.16 242)",
+          "oklch(0.62 0.16 242)",
+          "oklch(0.74 0.128 242)",
+          "oklch(0.86 0.08 242)",
+          "oklch(0.95 0.032 242)"
+        ]
+      },
+      "language-amber": {
+        "role": "category",
+        "displayName": "Language Amber",
+        "tonalRamp": [
+          "oklch(0.15 0.072 58)",
+          "oklch(0.27 0.108 58)",
+          "oklch(0.39 0.153 58)",
+          "oklch(0.5 0.18 58)",
+          "oklch(0.62 0.18 58)",
+          "oklch(0.74 0.144 58)",
+          "oklch(0.86 0.09 58)",
+          "oklch(0.95 0.036 58)"
+        ]
+      },
+      "pronunciation-rose": {
+        "role": "category",
+        "displayName": "Pronunciation Rose",
+        "tonalRamp": [
+          "oklch(0.15 0.1 18)",
+          "oklch(0.27 0.15 18)",
+          "oklch(0.39 0.212 18)",
+          "oklch(0.5 0.25 18)",
+          "oklch(0.62 0.25 18)",
+          "oklch(0.74 0.2 18)",
+          "oklch(0.86 0.125 18)",
+          "oklch(0.95 0.05 18)"
+        ]
+      },
+      "eye-contact-emerald": {
+        "role": "category",
+        "displayName": "Eye-contact Emerald",
+        "tonalRamp": [
+          "oklch(0.15 0.058 163)",
+          "oklch(0.27 0.087 163)",
+          "oklch(0.39 0.123 163)",
+          "oklch(0.5 0.145 163)",
+          "oklch(0.62 0.145 163)",
+          "oklch(0.74 0.116 163)",
+          "oklch(0.86 0.072 163)",
+          "oklch(0.95 0.029 163)"
+        ]
+      },
+      "posture-orange": {
+        "role": "category",
+        "displayName": "Posture Orange",
+        "tonalRamp": [
+          "oklch(0.15 0.088 41)",
+          "oklch(0.27 0.132 41)",
+          "oklch(0.39 0.187 41)",
+          "oklch(0.5 0.22 41)",
+          "oklch(0.62 0.22 41)",
+          "oklch(0.74 0.176 41)",
+          "oklch(0.86 0.11 41)",
+          "oklch(0.95 0.044 41)"
+        ]
+      },
+      "body-language-teal": {
+        "role": "category",
+        "displayName": "Body-language Teal",
+        "tonalRamp": [
+          "oklch(0.15 0.047 185)",
+          "oklch(0.27 0.071 185)",
+          "oklch(0.39 0.1 185)",
+          "oklch(0.5 0.118 185)",
+          "oklch(0.62 0.118 185)",
+          "oklch(0.74 0.094 185)",
+          "oklch(0.86 0.059 185)",
+          "oklch(0.95 0.024 185)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Page titles; system sans 600, tight tracking."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Card and section headings; weight carries rank, size stays flat."
+      },
+      "tempo": {
+        "displayName": "Tempo Marking",
+        "purpose": "Bold italic serif for tempo words, the streak count and the live prep marking only."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Controls, lists, transcript and running text; tabular figures on numbers."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Field labels, legends and footnotes in ink-muted, sentence case."
+      },
+      "bar-number": {
+        "displayName": "Bar Number",
+        "purpose": "Mono time labels above stave bar lines and transcript timestamps."
+      },
+      "urdu-text": {
+        "displayName": "Urdu Text",
+        "purpose": "Nastaliq system faces for all Urdu text, with tall line height."
+      },
+      "urdu-control": {
+        "displayName": "Urdu Control",
+        "purpose": "Naskh system faces for Urdu inputs and selects so one-line controls fit."
+      }
+    },
+    "shadows": [
+      {
+        "name": "contact",
+        "value": "0 1px 2px rgb(0 0 0 / 0.12)",
+        "purpose": "Primary buttons only."
+      },
+      {
+        "name": "rail-hairline",
+        "value": "inset 0 0 0 1px rgb(255 255 255 / 0.08)",
+        "purpose": "Active link on the navy rail."
+      }
+    ],
+    "motion": [
+      {
+        "name": "color-change",
+        "value": "150ms ease (transition-colors)",
+        "purpose": "Buttons, fields, rail links and segments."
+      },
+      {
+        "name": "note-hover",
+        "value": "transform scale(1.5) on note heads, scale(1.25) on markers",
+        "purpose": "Hover emphasis on stave marks."
+      },
+      {
+        "name": "gauge-needle",
+        "value": "700ms ease",
+        "purpose": "Live pace gauge needle easing to a new value."
+      },
+      {
+        "name": "filler-toast",
+        "value": "ss-toast 2.5s ease-out forwards",
+        "purpose": "Live filler-word toast fades in, holds, fades out."
+      },
+      {
+        "name": "filler-flash",
+        "value": "ss-flash 1.2s ease-out",
+        "purpose": "Brief amber flash on the live filler card."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "animation: none under prefers-reduced-motion: reduce",
+        "purpose": "Disables the toast and flash keyframes."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "sm",
+        "value": "640px"
+      },
+      {
+        "name": "md",
+        "value": "768px"
+      },
+      {
+        "name": "lg",
+        "value": "1024px",
+        "note": "Rail becomes a sticky side column."
+      },
+      {
+        "name": "xl",
+        "value": "1280px"
+      }
+    ],
+    "theming": {
+      "mode": "OS-driven light and dark via prefers-color-scheme; no manual toggle.",
+      "direction": "Urdu is right-to-left; staves, charts, gauges and number groups are pinned left-to-right."
+    }
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The one action color: conductor blue with a contact shadow.",
+      "html": "<button class=\"ds-btn-primary\">Practice live</button>",
+      "css": ".ds-btn-primary{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:0;border-radius:6px;padding:8px 16px;font:500 0.875rem/1.25rem ui-sans-serif,system-ui,-apple-system,sans-serif;background:var(--color-brand-600,oklch(0.5 0.19 264));color:#fff;box-shadow:0 1px 2px rgb(0 0 0/0.12);cursor:pointer;transition:background-color 150ms}.ds-btn-primary:hover{background:var(--color-brand-700,oklch(0.42 0.17 265))}.ds-btn-primary:focus-visible{outline:2px solid var(--color-brand-500,oklch(0.58 0.18 263));outline-offset:2px}.ds-btn-primary:disabled{opacity:.5;cursor:not-allowed}"
+    },
+    {
+      "name": "Quiet Button",
+      "kind": "button",
+      "refersTo": "button-quiet",
+      "description": "Secondary action: ink on sheet with a rule border.",
+      "html": "<button class=\"ds-btn-quiet\">Upload a recording</button>",
+      "css": ".ds-btn-quiet{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid oklch(0.84 0.018 257);border-radius:6px;padding:8px 16px;font:500 0.875rem/1.25rem ui-sans-serif,system-ui,-apple-system,sans-serif;background:#fff;color:oklch(0.27 0.032 263);cursor:pointer;transition:background-color 150ms,border-color 150ms}.ds-btn-quiet:hover{border-color:oklch(0.68 0.022 258);background:oklch(0.982 0.006 255)}.ds-btn-quiet:focus-visible{outline:2px solid oklch(0.58 0.18 263);outline-offset:2px}"
+    },
+    {
+      "name": "Segmented Choice",
+      "kind": "chip",
+      "refersTo": "segment-selected",
+      "description": "Selected is solid conductor blue; idle is a rule border.",
+      "html": "<div class=\"ds-seg\"><button class=\"ds-seg-b is-on\">Free talk</button><button class=\"ds-seg-b\">Prompt</button><button class=\"ds-seg-b\">Timed</button></div>",
+      "css": ".ds-seg{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;font-family:ui-sans-serif,system-ui,sans-serif}.ds-seg-b{border:1px solid oklch(0.84 0.018 257);border-radius:6px;padding:8px 12px;font-size:.875rem;background:#fff;color:oklch(0.21 0.034 265);cursor:pointer;text-align:start}.ds-seg-b:hover{border-color:oklch(0.68 0.022 258)}.ds-seg-b.is-on{border-color:oklch(0.5 0.19 264);background:oklch(0.5 0.19 264);color:#fff}.ds-seg-b:focus-visible{outline:2px solid oklch(0.58 0.18 263);outline-offset:2px}"
+    },
+    {
+      "name": "Field",
+      "kind": "input",
+      "refersTo": "field",
+      "description": "Sheet field with rule border; blue border and ring on focus.",
+      "html": "<label class=\"ds-label\">Email<input class=\"ds-field\" type=\"email\" placeholder=\"you@example.com\"></label>",
+      "css": ".ds-label{display:block;font:500 .875rem/1.25rem ui-sans-serif,system-ui,sans-serif;color:oklch(0.21 0.034 265)}.ds-field{display:block;margin-top:4px;width:100%;box-sizing:border-box;border:1px solid oklch(0.84 0.018 257);border-radius:6px;padding:8px 12px;font:400 1rem/1.5rem ui-sans-serif,system-ui,sans-serif;background:#fff;color:oklch(0.21 0.034 265);caret-color:oklch(0.5 0.19 264);transition:border-color 150ms}.ds-field::placeholder{color:oklch(0.68 0.022 258)}.ds-field:hover{border-color:oklch(0.68 0.022 258)}.ds-field:focus{border-color:oklch(0.58 0.18 263)}.ds-field:focus-visible{outline:2px solid oklch(0.58 0.18 263);outline-offset:2px}"
+    },
+    {
+      "name": "Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Sheet panel on paper: hairline border, 10px corners, no shadow.",
+      "html": "<div class=\"ds-card\"><h2 class=\"ds-card-h\">This week</h2><p class=\"ds-card-p\">3 / 4 sessions</p></div>",
+      "css": ".ds-card{border:1px solid oklch(0.91 0.014 256);border-radius:10px;background:#fff;padding:20px;font-family:ui-sans-serif,system-ui,sans-serif;color:oklch(0.21 0.034 265)}.ds-card-h{margin:0 0 8px;font-size:1rem;font-weight:600}.ds-card-p{margin:0;font-size:.875rem;color:oklch(0.55 0.025 259);font-variant-numeric:tabular-nums}"
+    },
+    {
+      "name": "Score Rail",
+      "kind": "nav",
+      "refersTo": "rail",
+      "description": "Navy rail with mist links; current link gets a light fill and inset hairline.",
+      "html": "<nav class=\"ds-rail\"><a class=\"ds-rail-a is-on\" href=\"#\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M4 20V4M4 20h16M8 16l3.5-4 3 2.5L20 8\"/></svg>Dashboard</a><a class=\"ds-rail-a\" href=\"#\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M12 3a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3zM5 11a7 7 0 0 0 14 0M12 18v3\"/></svg>Live</a></nav>",
+      "css": ".ds-rail{display:flex;flex-direction:column;gap:4px;width:15rem;box-sizing:border-box;padding:16px;background:oklch(0.22 0.06 268)}.ds-rail-a{display:flex;align-items:center;gap:12px;border-radius:6px;padding:8px 12px;font:500 .875rem/1.25rem ui-sans-serif,system-ui,sans-serif;color:oklch(0.86 0.05 262);text-decoration:none;transition:background-color 150ms,color 150ms}.ds-rail-a:hover{background:rgb(255 255 255/.06);color:#fff}.ds-rail-a.is-on{background:rgb(255 255 255/.12);color:#fff;box-shadow:inset 0 0 0 1px rgb(255 255 255/.08)}.ds-rail-a:focus-visible{outline:2px solid oklch(0.58 0.18 263);outline-offset:2px}"
+    },
+    {
+      "name": "Session Stave",
+      "kind": "custom",
+      "description": "Five-line stave against time: bar numbers, category note heads, tie, playhead and tempo marking.",
+      "html": "<div class=\"ds-stave\"><p class=\"ds-tempo\">Allegro <span>158 wpm</span></p><svg viewBox=\"0 0 320 110\" width=\"100%\"><g class=\"ds-st-l\"><line x1=\"0\" x2=\"320\" y1=\"30\" y2=\"30\"/><line x1=\"0\" x2=\"320\" y1=\"48\" y2=\"48\"/><line x1=\"0\" x2=\"320\" y1=\"66\" y2=\"66\"/><line x1=\"0\" x2=\"320\" y1=\"84\" y2=\"84\"/><line x1=\"0\" x2=\"320\" y1=\"102\" y2=\"102\"/><line x1=\"1\" x2=\"1\" y1=\"30\" y2=\"102\"/><line x1=\"107\" x2=\"107\" y1=\"30\" y2=\"102\"/><line x1=\"213\" x2=\"213\" y1=\"30\" y2=\"102\"/></g><line x1=\"318\" x2=\"318\" y1=\"30\" y2=\"102\" class=\"ds-st-end\"/><text x=\"2\" y=\"12\" class=\"ds-st-n\">0:00</text><text x=\"108\" y=\"12\" class=\"ds-st-n\">0:10</text><text x=\"214\" y=\"12\" class=\"ds-st-n\">0:20</text><rect x=\"140\" y=\"38\" width=\"60\" height=\"3\" rx=\"1.5\" class=\"ds-tie\"/><ellipse cx=\"140\" cy=\"39\" rx=\"4.4\" ry=\"3.1\" transform=\"rotate(-22 140 39)\" class=\"ds-h-sky\"/><ellipse cx=\"60\" cy=\"48\" rx=\"4.4\" ry=\"3.1\" transform=\"rotate(-22 60 48)\" class=\"ds-h-amber ds-open\"/><ellipse cx=\"250\" cy=\"30\" rx=\"4.4\" ry=\"3.1\" transform=\"rotate(-22 250 30)\" class=\"ds-h-violet\"/><line x1=\"170\" x2=\"170\" y1=\"24\" y2=\"110\" class=\"ds-play\"/></svg></div>",
+      "css": ".ds-stave{border:1px solid oklch(0.91 0.014 256);border-radius:10px;background:#fff;padding:16px;font-family:ui-sans-serif,system-ui,sans-serif}.ds-tempo{margin:0 0 4px;font:italic 700 1.125rem/1.75rem 'Iowan Old Style',Charter,Palatino,Georgia,serif;color:oklch(0.27 0.032 263)}.ds-tempo span{font:400 .75rem ui-sans-serif,system-ui,sans-serif;color:oklch(0.55 0.025 259);margin-inline-start:8px;font-variant-numeric:tabular-nums}.ds-st-l line{stroke:oklch(0.84 0.018 257);stroke-width:1}.ds-st-end{stroke:oklch(0.55 0.025 259);stroke-width:3}.ds-st-n{font:10px ui-monospace,Menlo,monospace;fill:oklch(0.68 0.022 258)}.ds-tie{fill:oklch(58.8% 0.158 241.966);opacity:.35}.ds-h-sky{fill:oklch(58.8% 0.158 241.966);stroke:oklch(58.8% 0.158 241.966);stroke-width:1.6;cursor:pointer}.ds-h-amber{stroke:oklch(66.6% 0.179 58.318);stroke-width:1.6}.ds-h-violet{fill:oklch(54.1% 0.281 293.009);stroke:oklch(54.1% 0.281 293.009);stroke-width:1.6}.ds-open{fill:none}.ds-play{stroke:oklch(0.5 0.19 264);stroke-width:2;stroke-linecap:round}"
+    },
+    {
+      "name": "Weekly Measure",
+      "kind": "custom",
+      "description": "One measure per week; done beats are ink, met goals turn every done head brass.",
+      "html": "<svg class=\"ds-measure\" viewBox=\"0 0 140 48\" width=\"140\" height=\"48\"><g class=\"ds-m-l\"><line x1=\"2\" x2=\"138\" y1=\"8\" y2=\"8\"/><line x1=\"2\" x2=\"138\" y1=\"16\" y2=\"16\"/><line x1=\"2\" x2=\"138\" y1=\"24\" y2=\"24\"/><line x1=\"2\" x2=\"138\" y1=\"32\" y2=\"32\"/><line x1=\"2\" x2=\"138\" y1=\"40\" y2=\"40\"/><line x1=\"2\" x2=\"2\" y1=\"8\" y2=\"40\"/><line x1=\"135\" x2=\"135\" y1=\"8\" y2=\"40\"/></g><line x1=\"138\" x2=\"138\" y1=\"8\" y2=\"40\" class=\"ds-m-end\"/><ellipse cx=\"24\" cy=\"24\" rx=\"6.5\" ry=\"4.6\" transform=\"rotate(-22 24 24)\" class=\"ds-m-won\"/><ellipse cx=\"50\" cy=\"24\" rx=\"6.5\" ry=\"4.6\" transform=\"rotate(-22 50 24)\" class=\"ds-m-won\"/><ellipse cx=\"76\" cy=\"24\" rx=\"6.5\" ry=\"4.6\" transform=\"rotate(-22 76 24)\" class=\"ds-m-won\"/><ellipse cx=\"102\" cy=\"24\" rx=\"6.5\" ry=\"4.6\" transform=\"rotate(-22 102 24)\" class=\"ds-m-won\"/></svg>",
+      "css": ".ds-m-l line{stroke:oklch(0.84 0.018 257);stroke-width:1}.ds-m-end{stroke:oklch(0.55 0.025 259);stroke-width:2.5}.ds-m-won{fill:oklch(0.8 0.14 80);stroke:oklch(0.72 0.15 72);stroke-width:1.8}"
+    },
+    {
+      "name": "Earned Achievement",
+      "kind": "card",
+      "refersTo": "achievement-earned",
+      "description": "Brass only for earned things: brass-light card, brass disc, ink icon.",
+      "html": "<div class=\"ds-ach\"><span class=\"ds-ach-d\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M8 4h8v5a4 4 0 0 1-8 0zM8 6H4.5a3 3 0 0 0 3.5 4M16 6h3.5a3 3 0 0 1-3.5 4M12 13v4M8 21h8M9.5 17h5\"/></svg></span><span class=\"ds-ach-t\">First full week</span></div>",
+      "css": ".ds-ach{display:flex;align-items:center;gap:12px;border:1px solid oklch(0.86 0.11 85);border-radius:8px;padding:10px;background:oklch(0.86 0.11 85/.15);font:500 .875rem/1.2 ui-sans-serif,system-ui,sans-serif;color:oklch(0.21 0.034 265)}.ds-ach-d{display:grid;place-items:center;width:36px;height:36px;border-radius:9999px;background:oklch(0.8 0.14 80);color:oklch(0.16 0.032 266)}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Engraved Score",
+    "overview": "A talk is a performance read like a conductor's score: tempo, rests and dynamics marked against time. The app is set like a well-engraved orchestral part. A deep score-navy rail holds the instrument list (the navigation); the main sheet is cool paper with a faint blue cast, ruled in hairlines, printed in ink. Information is dense and exact, the way a score is: tabular figures, small radii, no ornament that does not mean something.\n\nThe world refuses the category default of grey cards with a blue button and a gamified confetti layer. There is one action color (conductor blue), one reward color (brass, rationed to things the speaker earned), and one decorative voice (the bold italic serif tempo marking). Everything else is ink on paper. Musical notation is the native visual language, not a theme applied on top: sessions are staves, issues are note heads on their category's line, weekly goals are a measure of beats, pauses are breath marks, caesuras and fermatas, and pace is named Adagio to Presto.\n\nThe whole system runs on system fonts and inline SVG. Nothing is downloaded at runtime, light and dark follow the OS, and the same score reads in English, German and right-to-left Urdu.",
+    "keyCharacteristics": [
+      "Navy score rail, paper sheet, ink text; hairline borders instead of shadows.",
+      "Conductor blue marks actions and the current place, and nothing else.",
+      "Brass appears only on earned things: met weekly measures, streak days, earned achievements.",
+      "Notation as data: staves, bar lines, note heads, ties, breath marks and tempo words carry real values.",
+      "Bold italic serif tempo markings are the only display voice; all other type is the system sans with tabular figures.",
+      "System font stacks only, including Nastaliq for Urdu text and Naskh for Urdu form controls."
+    ],
+    "rules": [
+      {
+        "name": "The Earned Brass Rule",
+        "body": "Brass marks only something the speaker achieved (a met goal, a practiced day, an earned badge). It is never an accent, a warning, a hover or a highlight.",
+        "section": "colors"
+      },
+      {
+        "name": "The One Baton Rule",
+        "body": "Conductor blue is the only action and current-place color. Selected state is a solid blue fill with white text; idle state is ink on sheet with a rule border. No second action hue.",
+        "section": "colors"
+      },
+      {
+        "name": "The Staff Stays on the Staff Rule",
+        "body": "Category hues belong to issue marks on the stave, its legend and transcript highlights. They never color buttons, headings or panels.",
+        "section": "colors"
+      },
+      {
+        "name": "The Tabular Figure Rule",
+        "body": "Every number that can change or be compared (scores, words per minute, counts, times, table cells) is set with tabular figures.",
+        "section": "typography"
+      },
+      {
+        "name": "The Single Marking Voice Rule",
+        "body": "The tempo serif is reserved for musical markings and the streak count. Headings, buttons and labels are always the sans.",
+        "section": "typography"
+      },
+      {
+        "name": "The Script Fits the Control Rule",
+        "body": "Urdu text is set in Nastaliq at line height 1.9; Urdu inputs and selects switch to Naskh at line height 1.3 so one-line controls fit. Mono and tabular spans fall back to the sans in Urdu. All are system faces; none is fetched.",
+        "section": "typography"
+      },
+      {
+        "name": "The Hairline-Not-Shadow Rule",
+        "body": "Panels separate from paper by a 1px hairline border and a white sheet, never by a drop shadow.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "**Do** draw time-based data as notation: staves, bar lines, note heads, ties and tempo words, each carrying a real value.",
+      "**Do** keep conductor blue for actions, selection, links, focus and the current place.",
+      "**Do** keep brass for things the speaker earned and nothing else.",
+      "**Do** separate panels with a 1px hairline on a sheet over paper, 10px corners.",
+      "**Do** set every comparable number in tabular figures and every tempo marking in the bold italic serif.",
+      "**Do** use system font stacks only, with Nastaliq for Urdu text and Naskh for Urdu controls.",
+      "**Do** pin charts, staves, gauges and number groups left-to-right inside right-to-left layouts.",
+      "**Do** follow the OS for light and dark, and stop decorative animation under reduced motion."
+    ],
+    "donts": [
+      "**Don't** use drop shadows to lift cards or panels.",
+      "**Don't** add a gamified confetti layer, or use brass, amber or category hues as general decoration.",
+      "**Don't** introduce a second action color or color buttons with category hues.",
+      "**Don't** set headings, buttons or labels in the tempo serif.",
+      "**Don't** fetch fonts, icons or images at runtime, or pull in an icon package.",
+      "**Don't** set Urdu form controls in Nastaliq; it overflows one-line fields."
+    ]
+  }
+}

@@ -1,4 +1,5 @@
 import type { SessionStatus } from '../api/client'
+import { useI18n } from '../i18n'
 
 const styles: Record<SessionStatus, string> = {
   uploaded: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
@@ -8,18 +9,9 @@ const styles: Record<SessionStatus, string> = {
   failed: 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300',
 }
 
-const labels: Record<SessionStatus, string> = {
-  uploaded: 'Uploaded',
-  queued: 'Waiting',
-  processing: 'Analyzing',
-  completed: 'Done',
-  failed: 'Failed',
-}
-
 export function StatusBadge({ status }: { status: SessionStatus }) {
+  const { t } = useI18n()
   return (
-    <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${styles[status]}`}>
-      {labels[status]}
-    </span>
+    <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${styles[status]}`}>{t(`status.${status}`)}</span>
   )
 }

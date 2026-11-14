@@ -3,9 +3,16 @@
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.db.models import InputSource, SessionMode, SessionStatus
+
+
+class Prompt(BaseModel):
+    """A topic or question shown to the speaker, and when it appeared."""
+
+    t: float = Field(ge=0, le=3600)
+    text: str = Field(min_length=1, max_length=1000)
 
 
 class SessionOut(BaseModel):
@@ -16,6 +23,7 @@ class SessionOut(BaseModel):
     source: InputSource
     mode: SessionMode
     target_seconds: int | None
+    prompts: list[Prompt] = []
     language: str
     model_preset: str
     original_filename: str
@@ -42,3 +50,15 @@ class HealthOut(BaseModel):
 class ErrorOut(BaseModel):
     code: str
     message: str
+
+
+class AnnotationIn(BaseModel):
+    t: float = Field(ge=0, le=7200)
+    text: str = Field(min_length=1, max_length=2000)
+
+
+class AnnotationOut(AnnotationIn):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    created_at: datetime

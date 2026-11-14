@@ -24,6 +24,7 @@ SPLIT_SEARCH_S = 1.5  # look for a quiet point in the last part of the chunk
 FRAME_S = 0.1
 SILENCE_RMS = 0.01  # quieter frames (float scale) count as silence
 RECENT_WINDOW_S = 30.0
+RECENT_WORDS = 40
 
 # (samples float32, offset seconds) -> words with absolute times
 TranscribeFn = Callable[[npt.NDArray[np.float32], float], list[Word]]
@@ -39,6 +40,7 @@ class LiveStats:
     filler_counts: dict[str, int]
     last_text: str
     speaking: bool
+    recent_words: list[str]  # the last words heard, for following along a script
 
     def as_dict(self) -> dict[str, object]:
         return {"type": "stats", **self.__dict__}
@@ -122,6 +124,7 @@ class LiveTranscriber:
             fillers=len(fillers),
             filler_counts=counts,
             last_text=self._last_text,
+            recent_words=[w.text for w in words[-RECENT_WORDS:]],
             speaking=speaking,
         )
 
@@ -130,13 +133,14 @@ def whisper_transcribe_fn(model_size: str, models_dir: str, lang: str = "en") ->
     from app.pipeline import transcribe as tr
 
     model = tr.load_model(model_size, models_dir, "auto")
+    prompt = tr.filler_prompt(lang)
 
     def run(samples: npt.NDArray[np.float32], offset: float) -> list[Word]:
         segments, _ = model.transcribe(
             samples,
             language=lang,
             word_timestamps=True,
-            initial_prompt=tr.FILLER_PROMPT,
+            initial_prompt=prompt,
             condition_on_previous_text=False,
             vad_filter=False,
             beam_size=1,

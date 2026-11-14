@@ -10,6 +10,7 @@ export interface LiveStats {
   filler_counts: Record<string, number>
   last_text: string
   speaking: boolean
+  recent_words?: string[]
 }
 
 type Message = LiveStats | { type: 'ready' } | { type: 'done' } | { type: 'error'; message: string }
@@ -18,6 +19,8 @@ export interface AudioStreamHandlers {
   onReady?: () => void
   onStats: (s: LiveStats) => void
   onError: (message: string) => void
+  /** Loudness of each small audio chunk (RMS, 0..1), many times per second. */
+  onLevel?: (rms: number, at: number) => void
 }
 
 const SEND_EVERY_SAMPLES = 4000 // 250 ms at 16 kHz
@@ -50,7 +53,7 @@ export class LiveAudioStream {
       else if (msg.type === 'ready') this.handlers.onReady?.()
       else if (msg.type === 'error') this.handlers.onError(msg.message)
     }
-    this.ws.onerror = () => this.handlers.onError('Live feedback is unavailable. Recording still works.')
+    this.ws.onerror = () => this.handlers.onError('unavailable')
 
     this.ctx = ctx
     // Browsers start an AudioContext paused unless a click allowed it; resume to be sure.
@@ -67,6 +70,11 @@ export class LiveAudioStream {
   }
 
   private push(chunk: Float32Array) {
+    if (this.handlers.onLevel && chunk.length) {
+      let sum = 0
+      for (let i = 0; i < chunk.length; i++) sum += chunk[i] * chunk[i]
+      this.handlers.onLevel(Math.sqrt(sum / chunk.length), performance.now())
+    }
     this.buffer.push(chunk)
     this.buffered += chunk.length
     if (this.buffered < SEND_EVERY_SAMPLES) return

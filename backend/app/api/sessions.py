@@ -7,13 +7,16 @@ from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from fastapi.responses import FileResponse, Response
+from pydantic import TypeAdapter, ValidationError
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.api.deps import UserDep
 from app.config import MODEL_PRESETS, Settings, get_settings
 from app.db.models import (
+    TIMED_MODES,
     AnalysisResult,
+    Annotation,
     InputSource,
     PracticeSession,
     SessionMode,
@@ -21,11 +24,13 @@ from app.db.models import (
     User,
 )
 from app.db.session import get_db
-from app.schemas.api import SessionOut
+from app.pipeline.language import SUPPORTED_LANGUAGES
+from app.schemas.api import AnnotationIn, AnnotationOut, Prompt, SessionOut
 from app.services import storage
 from app.services.queue import Enqueuer, get_enqueuer
 
 router = APIRouter(prefix="/api/sessions", tags=["sessions"])
+PromptList = TypeAdapter(list[Prompt])
 
 DbDep = Annotated[Session, Depends(get_db)]
 SettingsDep = Annotated[Settings, Depends(get_settings)]
@@ -33,6 +38,20 @@ SettingsDep = Annotated[Settings, Depends(get_settings)]
 
 def error(status_code: int, code: str, message: str) -> HTTPException:
     return HTTPException(status_code=status_code, detail={"code": code, "message": message})
+
+
+MAX_PROMPTS = 20
+
+
+def parse_prompts(raw: str | None) -> list[dict[str, Any]]:
+    """Prompts arrive as JSON: [{"t": seconds, "text": "..."}]. Invalid input is a 422."""
+    if not raw:
+        return []
+    try:
+        items = PromptList.validate_json(raw)
+    except ValidationError:
+        raise error(422, "bad_prompts", "prompts must be a JSON list of {t, text}.") from None
+    return [p.model_dump() for p in items[:MAX_PROMPTS]]
 
 
 def get_owned_session(session_id: uuid.UUID, db: Session, user: User) -> PracticeSession:
@@ -56,11 +75,15 @@ def create_session(
     script_text: Annotated[str | None, Form(max_length=50_000)] = None,
     language: Annotated[str, Form(max_length=8)] = "en",
     model_preset: Annotated[str, Form()] = "balanced",
+    prompts: Annotated[str | None, Form(max_length=20_000)] = None,
 ) -> PracticeSession:
     if model_preset not in MODEL_PRESETS:
         raise error(422, "bad_preset", f"model_preset must be one of {sorted(MODEL_PRESETS)}.")
+    if language not in SUPPORTED_LANGUAGES:
+        raise error(422, "bad_language", f"language must be one of {list(SUPPORTED_LANGUAGES)}.")
     if mode == SessionMode.script and not (script_text and script_text.strip()):
         raise error(422, "script_required", "Script mode needs the script text.")
+    prompt_list = parse_prompts(prompts)
 
     filename = file.filename or "recording"
     try:
@@ -93,8 +116,9 @@ def create_session(
         title=(title or "").strip() or filename.rsplit(".", 1)[0][:200] or "Practice session",
         source=source,
         mode=mode,
-        target_seconds=target_seconds if mode == SessionMode.timed_pitch else None,
+        target_seconds=target_seconds if mode in TIMED_MODES else None,
         script_text=script_text if mode == SessionMode.script else None,
+        prompts=prompt_list,
         language=language,
         model_preset=model_preset,
         original_filename=filename[:255],
@@ -150,7 +174,9 @@ def get_media(session_id: uuid.UUID, db: DbDep, user: UserDep) -> FileResponse:
 
 
 @router.get("/{session_id}/report.pdf")
-def get_report_pdf(session_id: uuid.UUID, db: DbDep, user: UserDep) -> Response:
+def get_report_pdf(
+    session_id: uuid.UUID, db: DbDep, user: UserDep, lang: str | None = None
+) -> Response:
     from app.pipeline.report import Report
     from app.schemas.transcript import Transcript
     from app.services import pdf
@@ -165,13 +191,20 @@ def get_report_pdf(session_id: uuid.UUID, db: DbDep, user: UserDep) -> Response:
     html = pdf.render_html(
         Report.model_validate(results["report"]),
         title=ps.title,
-        created=ps.created_at.strftime("%d %b %Y, %H:%M"),
+        created=ps.created_at.strftime("%d.%m.%Y, %H:%M"),
         duration_s=ps.duration_s,
         transcript_text=transcript.text if transcript else "",
         pacing=results.get("pacing"),
         voice=results.get("voice"),
         body=results.get("body"),
         voice_emotion=results.get("voice_emotion"),
+        lang=lang or (user.settings or {}).get("ui_language") or "en",
+        mode=ps.mode.value,
+        target_seconds=ps.target_seconds,
+        prompts=ps.prompts,
+        notes=[{"t": n.t, "text": n.text} for n in ps.annotations],
+        language_result=results.get("language"),
+        summary=results.get("summary"),
     )
     safe = "".join(c if c.isalnum() or c in " -_" else "_" for c in ps.title).strip() or "report"
     return Response(
@@ -208,3 +241,59 @@ def delete_session(session_id: uuid.UUID, db: DbDep, user: UserDep, settings: Se
     db.delete(ps)
     db.commit()
     storage.delete_session_files(settings.media_dir, session_id)
+
+
+# ---- Notes pinned to moments of the video ----------------------------------
+
+MAX_ANNOTATIONS = 200
+
+
+def _owned_annotation(
+    session_id: uuid.UUID, note_id: uuid.UUID, db: Session, user: User
+) -> Annotation:
+    get_owned_session(session_id, db, user)
+    note = db.get(Annotation, note_id)
+    if note is None or note.session_id != session_id:
+        raise error(404, "not_found", "Note not found.")
+    return note
+
+
+@router.get("/{session_id}/annotations", response_model=list[AnnotationOut])
+def list_annotations(session_id: uuid.UUID, db: DbDep, user: UserDep) -> list[Annotation]:
+    return list(get_owned_session(session_id, db, user).annotations)
+
+
+@router.post(
+    "/{session_id}/annotations",
+    response_model=AnnotationOut,
+    status_code=status.HTTP_201_CREATED,
+)
+def add_annotation(
+    session_id: uuid.UUID, body: AnnotationIn, db: DbDep, user: UserDep
+) -> Annotation:
+    ps = get_owned_session(session_id, db, user)
+    if len(ps.annotations) >= MAX_ANNOTATIONS:
+        raise error(409, "too_many_notes", f"A session can have up to {MAX_ANNOTATIONS} notes.")
+    note = Annotation(session_id=ps.id, t=round(body.t, 2), text=body.text.strip())
+    db.add(note)
+    db.commit()
+    db.refresh(note)
+    return note
+
+
+@router.put("/{session_id}/annotations/{note_id}", response_model=AnnotationOut)
+def edit_annotation(
+    session_id: uuid.UUID, note_id: uuid.UUID, body: AnnotationIn, db: DbDep, user: UserDep
+) -> Annotation:
+    note = _owned_annotation(session_id, note_id, db, user)
+    note.t = round(body.t, 2)
+    note.text = body.text.strip()
+    db.commit()
+    db.refresh(note)
+    return note
+
+
+@router.delete("/{session_id}/annotations/{note_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_annotation(session_id: uuid.UUID, note_id: uuid.UUID, db: DbDep, user: UserDep) -> None:
+    db.delete(_owned_annotation(session_id, note_id, db, user))
+    db.commit()

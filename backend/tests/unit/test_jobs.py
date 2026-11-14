@@ -97,6 +97,7 @@ def test_job_completes_and_stores_results(
         "pronunciation",
         "voice_emotion",
         "body",
+        "summary",
         "report",
     }
 

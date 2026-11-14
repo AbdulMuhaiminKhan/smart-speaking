@@ -27,6 +27,7 @@ from app.pipeline import (
     report,
     report_llm,
     scoring,
+    summary,
     transcribe,
     voice,
     voice_emotion,
@@ -153,13 +154,15 @@ def analyze_session(session_id: str) -> None:
 
             progress.stage("pronunciation")
             pron_m: PronunciationMetrics | None = None
-            try:
-                pron_m = pronunciation.run(
-                    audio_path, transcript, settings.models_dir, ps.language or "en"
-                )
-                save_result(db, sid, "pronunciation", pron_m.model_dump())
-            except Exception:
-                log.exception("pronunciation analysis failed for session %s", session_id)
+            pron_supported = (ps.language or "en") in pronunciation.PRONUNCIATION_LANGUAGES
+            if pron_supported:
+                try:
+                    pron_m = pronunciation.run(
+                        audio_path, transcript, settings.models_dir, ps.language or "en"
+                    )
+                    save_result(db, sid, "pronunciation", pron_m.model_dump())
+                except Exception:
+                    log.exception("pronunciation analysis failed for session %s", session_id)
 
             progress.stage("emotion")
             emo_m: VoiceEmotionMetrics | None = None
@@ -189,9 +192,16 @@ def analyze_session(session_id: str) -> None:
                 except Exception:
                     log.exception("body analysis failed for session %s", session_id)
 
+            summary_m = summary.build(transcript, pacing_m, language_m, voice_m, body_m)
+            save_result(db, sid, "summary", summary_m.model_dump())
+
             progress.stage("report")
             not_scored = scoring.body_not_scored(body_m, info.has_video)
-            if pron_m is None:
+            if not pron_supported:
+                not_scored["pronunciation"] = (
+                    "The pronunciation check is available for English and German only."
+                )
+            elif pron_m is None:
                 not_scored["pronunciation"] = "Pronunciation analysis failed for this recording."
             elif pron_m.words_checked < 20:
                 not_scored["pronunciation"] = (
@@ -236,8 +246,13 @@ def analyze_session(session_id: str) -> None:
 
             if settings.llm_enabled:
                 progress.stage("coaching")
+                user_settings = ps.user.settings or {}
                 rep = report_llm.run(
-                    rep, transcript.text, url=settings.ollama_url, model=settings.ollama_model
+                    rep,
+                    transcript.text,
+                    url=settings.ollama_url,
+                    model=settings.ollama_model,
+                    language=user_settings.get("ui_language") or ps.language or "en",
                 )
                 save_result(db, sid, "report", rep.model_dump())
 

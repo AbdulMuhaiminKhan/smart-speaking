@@ -1,111 +1,149 @@
 <!doctype html>
-<html lang="en">
+<html lang="{{ lang }}" dir="{{ dir }}">
 <head>
 <meta charset="utf-8">
-<title>SmartSpeaking report: {{ title }}</title>
+<title>{{ t.report }}: {{ title }}</title>
 <style>
-  @page { size: A4; margin: 18mm 16mm; @bottom-right { content: "Page " counter(page) " of " counter(pages); font-size: 8pt; color: #94a3b8; } }
-  body { font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; color: #0f172a; font-size: 10pt; line-height: 1.45; }
-  h1 { font-size: 20pt; margin: 0; }
-  h2 { font-size: 12.5pt; margin: 18pt 0 6pt; border-bottom: 1px solid #e2e8f0; padding-bottom: 3pt; }
+  @page { size: A4; margin: 18mm 16mm;
+    @bottom-center { content: "{{ t.page }} " counter(page) " {{ t.of }} " counter(pages); font-size: 8pt; color: #94a3b8; } }
+  body { font-family: "Helvetica Neue", Helvetica, Arial, "Noto Naskh Arabic", "Noto Nastaliq Urdu", "Noto Sans Arabic", sans-serif;
+    color: #0f172a; font-size: 10pt; line-height: 1.5; }
+  html[lang="ur"] body { font-family: "Noto Nastaliq Urdu", "Noto Naskh Arabic", "Noto Sans Arabic", "Helvetica Neue", Arial, sans-serif; line-height: 2; }
+  .ltr { direction: ltr; unicode-bidi: isolate; }
+  html[lang="ur"] [dir="ltr"] { font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; line-height: 1.5; }
+  .brand { color: #2756e0; font-weight: 700; letter-spacing: 0.02em; font-size: 9pt; text-transform: uppercase; }
+  h1 { font-size: 21pt; margin: 2pt 0 0; }
+  h2 { font-size: 12.5pt; margin: 18pt 0 6pt; border-bottom: 1.5px solid #e2e8f0; padding-bottom: 3pt; color: #1e293b; }
   h3 { font-size: 10.5pt; margin: 10pt 0 3pt; }
   .muted { color: #64748b; }
   .small { font-size: 8.5pt; }
   .top { display: flex; gap: 16pt; align-items: center; }
-  .overall { font-size: 40pt; font-weight: bold; line-height: 1; }
+  .overall { font-size: 42pt; font-weight: bold; line-height: 1; }
   .good { color: #047857; } .ok { color: #b45309; } .bad { color: #b91c1c; }
   table { width: 100%; border-collapse: collapse; }
-  td, th { text-align: left; padding: 3pt 4pt; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
+  td, th { text-align: start; padding: 3pt 4pt; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
   th { color: #64748b; font-weight: normal; font-size: 8.5pt; }
   .cols { display: flex; gap: 14pt; } .cols > div { flex: 1; }
-  ol, ul { margin: 3pt 0; padding-left: 14pt; }
+  ol, ul { margin: 3pt 0; padding-inline-start: 14pt; }
   .fix { margin-bottom: 6pt; }
   .section { page-break-inside: avoid; margin-bottom: 8pt; }
   .chart { page-break-inside: avoid; margin: 4pt 0 10pt; }
-  .quote { background: #f8fafc; padding: 5pt 7pt; margin: 4pt 0; }
-  .issue td:first-child { font-family: Menlo, monospace; color: #64748b; width: 34pt; }
+  .quote { background: #f8fafc; padding: 5pt 7pt; margin: 4pt 0; border-inline-start: 3px solid #cbd5e1; }
+  .time { font-family: Menlo, monospace; color: #64748b; width: 34pt; direction: ltr; }
+  .chip { display: inline-block; background: #eef4ff; color: #1f45b5; border-radius: 8pt; padding: 1pt 7pt; font-size: 8.5pt; }
+  .note { border-inline-start: 3px solid #d946ef; }
+  .skipped { color: #b91c1c; text-decoration: line-through; }
+  .added { background: #fef3c7; }
+  .metrics td:last-child { font-weight: bold; text-align: end; }
 </style>
 </head>
 <body>
+  <div class="brand">SmartSpeaking</div>
   <h1>{{ title }}</h1>
-  <p class="muted">{{ created }} · {{ duration }} · SmartSpeaking practice report</p>
+  <p class="muted">{{ created }} · <span class="ltr">{{ duration }}</span> · {{ t.report }}
+    {% if mode_label %} · <span class="chip">{{ mode_label }}{% if target %} · {{ target }}{% endif %}</span>{% endif %}</p>
 
   <div class="top">
-    <div>{{ radar | safe }}</div>
+    <div class="ltr">{{ radar | safe }}</div>
     <div>
-      <div class="muted small">Overall score</div>
+      <div class="muted small">{{ t.overall }}</div>
       <div class="overall {{ overall_class }}">{{ overall }}</div>
-      {% if summary %}<p>{{ summary }}</p>{% endif %}
+      {% if summary %}<p dir="{{ summary | textdir }}">{{ summary }}</p>{% endif %}
       <p class="muted small">{{ coach_note }}</p>
     </div>
   </div>
 
+  {% if prompts %}
+  <h2>{{ t.prompts }}</h2>
+  <table>{% for p in prompts %}<tr><td class="time">{{ p.time }}</td><td dir="{{ p.text | textdir }}">{{ p.text }}</td></tr>{% endfor %}</table>
+  {% endif %}
+
   <div class="cols">
     <div>
-      <h2>What you did well</h2>
-      <ul>{% for s in strengths %}<li>{{ s }}</li>{% else %}<li>Keep practicing to build strengths.</li>{% endfor %}</ul>
+      <h2>{{ t.well }}</h2>
+      <ul dir="{{ strengths | textdir }}">{% for s in strengths %}<li>{{ s }}</li>{% else %}<li>{{ t.well_empty }}</li>{% endfor %}</ul>
     </div>
     <div>
-      <h2>Biggest gaps</h2>
-      <ul>{% for g in gaps %}<li>{{ g.message }}</li>{% else %}<li>No major gaps.</li>{% endfor %}</ul>
+      <h2>{{ t.gaps }}</h2>
+      <ul dir="{{ gaps | map(attribute='message') | list | textdir }}">{% for g in gaps %}<li>{{ g.message }}</li>{% else %}<li>{{ t.gaps_empty }}</li>{% endfor %}</ul>
     </div>
   </div>
 
   {% if fixes %}
-  <h2>Your top {{ fixes | length }} fixes for next time</h2>
-  <ol>
+  <h2>{{ fixes_title }}</h2>
+  <ol dir="{{ fixes | map(attribute='how') | list | textdir }}">
     {% for f in fixes %}
-    <li class="fix"><strong>{{ f.title }}.</strong> {{ f.how }}<br><span class="muted">Drill: {{ f.drill }}</span></li>
+    <li class="fix"><strong>{{ f.title }}.</strong> {{ f.how }}<br><span class="muted">{{ t.drill }}: {{ f.drill }}</span></li>
     {% endfor %}
   </ol>
   {% endif %}
 
-  <h2>By category</h2>
+  {% if metrics %}
+  <h2>{{ t.delivery }}</h2>
+  <table class="metrics">{% for m in metrics %}<tr><td>{{ m.label }}</td><td class="ltr">{{ m.value }}</td></tr>{% endfor %}</table>
+  {% endif %}
+
+  {% if notes %}
+  <h2>{{ t.notes }}</h2>
+  {% for n in notes %}<div class="quote note"><span class="time">{{ n.time }}</span> <span dir="{{ n.text | textdir }}">{{ n.text }}</span></div>{% endfor %}
+  {% endif %}
+
+  {% if script %}
+  <h2>{{ t.script }}</h2>
+  <p>{{ script.summary }}</p>
+  {% for p in script.gaps %}
+  <div class="quote"><span class="time">{{ p.time }}</span>
+    {% if p.script %}<span class="muted">{{ t.skipped }}:</span> <span class="skipped" dir="{{ p.script | textdir }}">{{ p.script }}</span>{% endif %}
+    {% if p.spoken %}<br><span class="muted">{{ t.added }}:</span> <span class="added" dir="{{ p.spoken | textdir }}">{{ p.spoken }}</span>{% endif %}
+  </div>
+  {% endfor %}
+  {% endif %}
+
+  <h2>{{ t.by_category }}</h2>
   {% for s in sections %}
   <div class="section">
-    <h3>{{ s.label }} {% if s.score is not none %}<span class="{{ s.cls }}">· {{ s.score }}</span>{% else %}<span class="muted">· not scored</span>{% endif %}</h3>
+    <h3>{{ s.label }} {% if s.score is not none %}<span class="{{ s.cls }}">· {{ s.score }}</span>{% else %}<span class="muted">· {{ t.not_scored }}</span>{% endif %}</h3>
     {% if s.note %}<div class="muted small">{{ s.note }}</div>{% endif %}
-    <ul>{% for w in s.what_happened %}<li>{{ w }}</li>{% endfor %}</ul>
-    {% if s.why_it_matters %}<div class="muted">{{ s.why_it_matters }}</div>{% endif %}
-    {% for h in s.how_to_fix %}<div>→ {{ h }}</div>{% endfor %}
-    {% if s.drill %}<div class="quote"><strong>Practice drill:</strong> {{ s.drill }}</div>{% endif %}
+    <ul dir="{{ s.what_happened | textdir }}">{% for w in s.what_happened %}<li>{{ w }}</li>{% endfor %}</ul>
+    {% if s.why_it_matters %}<div class="muted" dir="{{ s.why_it_matters | textdir }}">{{ s.why_it_matters }}</div>{% endif %}
+    {% for h in s.how_to_fix %}<div dir="{{ h | textdir }}">• {{ h }}</div>{% endfor %}
+    {% if s.drill %}<div class="quote" dir="{{ s.drill | textdir }}"><strong>{{ t.drill }}:</strong> {{ s.drill }}</div>{% endif %}
   </div>
   {% endfor %}
 
   {% if clarity %}
-  <h2>Sentence clarity</h2>
-  <p>{{ clarity.feedback }}</p>
+  <h2>{{ t.clarity }}</h2>
+  <p dir="{{ clarity.feedback | textdir }}">{{ clarity.feedback }}</p>
   {% for e in clarity.examples %}
-  <div class="quote"><span class="muted">You said:</span> “{{ e.original }}”<br><strong>Try:</strong> “{{ e.suggestion }}”</div>
+  <div class="quote"><span class="muted">{{ t.you_said }}:</span> <bdi>“{{ e.original }}”</bdi><br><strong>{{ t.try }}:</strong> <bdi>“{{ e.suggestion }}”</bdi></div>
   {% endfor %}
   {% endif %}
 
   {% if charts %}
-  <h2>Over time</h2>
+  <h2>{{ t.over_time }}</h2>
   {% for c in charts %}
-  <div class="chart"><h3>{{ c.title }}</h3>{{ c.svg | safe }}<div class="muted small">{{ c.caption }}</div></div>
+  <div class="chart"><h3>{{ c.title }}</h3><div class="ltr">{{ c.svg | safe }}</div><div class="muted small">{{ c.caption }}</div></div>
   {% endfor %}
   {% endif %}
 
-  {% if emotions %}
-  <h2>Emotions <span class="muted small">(estimates)</span></h2>
+  {% if emotions.face or emotions.voice %}
+  <h2>{{ t.emotions }} <span class="muted small">({{ t.estimates }})</span></h2>
   <div class="cols">
-    {% if emotions.face %}<div><h3>Face</h3><table>{% for e in emotions.face %}<tr><td>{{ e.label }}</td><td>{{ e.pct }}%</td></tr>{% endfor %}</table></div>{% endif %}
-    {% if emotions.voice %}<div><h3>Voice</h3><table>{% for e in emotions.voice %}<tr><td>{{ e.label }}</td><td>{{ e.pct }}%</td></tr>{% endfor %}</table></div>{% endif %}
+    {% if emotions.face %}<div><h3>{{ t.face }}</h3><table>{% for e in emotions.face %}<tr><td>{{ e.label }}</td><td class="ltr">{{ e.pct }}%</td></tr>{% endfor %}</table></div>{% endif %}
+    {% if emotions.voice %}<div><h3>{{ t.voice }}</h3><table>{% for e in emotions.voice %}<tr><td>{{ e.label }}</td><td class="ltr">{{ e.pct }}%</td></tr>{% endfor %}</table></div>{% endif %}
   </div>
   {% endif %}
 
-  <h2>Mistakes timeline</h2>
+  <h2>{{ t.mistakes }}</h2>
   {% if issues %}
   <table>
-    {% for i in issues %}<tr class="issue"><td>{{ i.time }}</td><td>{{ i.message }}</td><td class="muted">{{ i.category }}</td></tr>{% endfor %}
+    {% for i in issues %}<tr><td class="time">{{ i.time }}</td><td dir="{{ i.message | textdir }}">{{ i.message }}</td><td class="muted">{{ i.category }}</td></tr>{% endfor %}
   </table>
-  {% else %}<p>No issues found.</p>{% endif %}
+  {% else %}<p>{{ t.no_issues }}</p>{% endif %}
 
-  <h2>Transcript</h2>
-  <p>{{ transcript }}</p>
+  <h2>{{ t.transcript }}</h2>
+  <p dir="{{ transcript | textdir }}">{{ transcript }}</p>
 
-  <p class="muted small">Scores come from the transparent rules in docs/scoring.md. Pronunciation and camera-based
-  scores are estimates. This report was created on your own computer; nothing was sent to a cloud service.</p>
+  <p class="muted small">{{ t.footer }}</p>
 </body>
 </html>

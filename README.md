@@ -10,24 +10,34 @@ transcript or metric is ever sent to a cloud service.
 
 ## Features
 
-- **Live mode:** webcam and microphone in the browser, with tracking boxes and
-  a skeleton around your face, hands and upper body, plus live words per
-  minute, filler counter, eye contact and posture hints. The recording is then
-  analyzed in full.
-- **Upload mode:** mp4, webm or mov up to 15 minutes, with progress bars for
-  the upload and the analysis.
-- **Report:** overall and category scores (radar chart), 3 strengths and 3
-  gaps, a per-category breakdown (what happened, why it matters, how to fix
-  it, a practice drill), your top 3 fixes, sentence-clarity rewrites, charts
-  of pace, pitch, volume and eye contact over time, a mistakes timeline that
-  jumps the video, and a transcript with fillers, pauses and unclear words
-  highlighted.
-- **PDF export** of the full report.
-- **Practice modes:** free talk, timed pitch (1, 3 or 5 minutes), and
-  compare-to-script.
-- **Accounts and progress:** email and password sign-in, a dashboard that
-  tracks your scores across sessions, settings (language, speed vs accuracy,
-  auto-delete video), delete a session or your whole account.
+- **Three languages:** English, German and Urdu, for the whole app (Urdu is
+  laid out right to left) and for the speech analysis: Whisper prompts and
+  filler, hedge and stopword lists per language. The AI coach writes its
+  feedback in your app language.
+- **Practice modes:** free talk, timed pitch, script rehearsal, impromptu
+  (random topic, 30 s to think), elevator pitch (30 or 60 s), interview Q&A
+  (questions on demand, pinned on the timeline) and Table Topics with
+  Toastmasters timing lights. Topics and questions come in all three languages.
+- **Live feedback:** a pace speedometer with a tempo marking, voice level,
+  pause timer, filler-word alerts (with an optional soft beep), eye contact,
+  posture and expression, with tracking boxes around face, hands and body.
+- **Script rehearsal:** write, paste or open a script, rehearse with a
+  teleprompter that follows your voice (or scrolls steadily), then see the
+  script with skipped, changed and added passages, each linked to the video.
+- **Report:** overall and category scores, strengths, gaps and top fixes,
+  detailed voice delivery (pitch variation, monotone, volume, pauses) and body
+  language (eye contact, gestures, open palms, posture, fidgeting), charts over
+  time, emotions, sentence-clarity rewrites, and a transcript with fillers,
+  pauses and unclear words highlighted.
+- **Playback:** the session drawn as a score (a stave with every issue as a
+  note), notes you pin to any moment, and playback speed control.
+- **PDF export** in your app language, with your notes, script gaps and
+  delivery numbers.
+- **Progress:** trends for score, filler words, pace and clarity; goals
+  (sessions per week, fillers, pace, score); practice streaks; 15 achievements.
+- **Upload mode:** mp4, webm or mov up to 15 minutes.
+- **Accounts:** email and password sign-in, settings, delete a session or your
+  whole account.
 
 ## Quick start (Docker)
 
@@ -152,8 +162,11 @@ AI coach (about 45 seconds).
   prompt pushes it to keep them, but some may still be dropped.
 - **The tone label** (confident, nervous, flat, rushed) is a transparent
   heuristic, not a trained emotion model.
-- **English only for now.** The code is built for more languages: add a
-  lexicon in `backend/app/pipeline/lexicons/` and a voice in the pronunciation step.
+- **Languages:** English, German and Urdu. The pronunciation check runs for
+  English and German only (the phoneme model knows too little Urdu to judge it
+  fairly). If the AI coach is not running, the fallback coaching text is English.
+  Add a language with a lexicon in `backend/app/pipeline/lexicons/` and a
+  dictionary in `frontend/src/i18n/`.
 - **Hands out of frame:** with a laptop webcam your hands are often not
   visible, so gesture scores have little to work with.
 - **Docker on a Mac** has no GPU access, so run Ollama natively for speed.

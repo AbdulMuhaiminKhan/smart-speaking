@@ -1,29 +1,43 @@
 import { useState, type FormEvent } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { ApiError, authApi, type ModelPreset, type UserSettings } from '../api/client'
-import { useAuth } from '../auth/AuthContext'
 
-const card = 'rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900'
-const input = 'mt-1 w-full rounded-md border border-slate-300 bg-transparent px-3 py-2 dark:border-slate-700'
+const DEFAULT_GOALS: Goals = { sessions_per_week: 3, max_fillers_per_min: 3, wpm_low: 120, wpm_high: 160, min_score: null }
+const GOAL_FIELDS: { key: keyof Goals; label: 'goal.field_sessions' | 'goal.field_fillers' | 'goal.field_wpm_low' | 'goal.field_wpm_high' | 'goal.field_score'; min: number; max: number; step: number }[] = [
+  { key: 'sessions_per_week', label: 'goal.field_sessions', min: 1, max: 21, step: 1 },
+  { key: 'max_fillers_per_min', label: 'goal.field_fillers', min: 0, max: 30, step: 0.5 },
+  { key: 'wpm_low', label: 'goal.field_wpm_low', min: 60, max: 250, step: 5 },
+  { key: 'wpm_high', label: 'goal.field_wpm_high', min: 60, max: 250, step: 5 },
+  { key: 'min_score', label: 'goal.field_score', min: 1, max: 100, step: 1 },
+]
+import { useNavigate } from 'react-router-dom'
+import { authApi, type Goals, type Lang, type ModelPreset, type UserSettings } from '../api/client'
+import { useAuth } from '../auth/AuthContext'
+import { useI18n } from '../i18n'
+import { LANGS } from '../i18n/core'
+import { errorText } from '../lib/errors'
+
+const card = 'card'
+const input = 'field'
 
 export function SettingsPage() {
   const { user, setUser } = useAuth()
   const navigate = useNavigate()
+  const { t, setLang } = useI18n()
   const [settings, setSettings] = useState<UserSettings>(user!.settings)
   const [saved, setSaved] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [pw, setPw] = useState({ current: '', next: '' })
   const [deletePw, setDeletePw] = useState('')
+  const [goals, setGoals] = useState<Goals>(user!.settings.goals ?? DEFAULT_GOALS)
 
   async function save(next: UserSettings) {
     setSettings(next)
     setError(null)
     try {
       setUser(await authApi.updateSettings(next))
-      setSaved('Settings saved.')
+      setSaved(t('settings.saved'))
       setTimeout(() => setSaved(null), 2000)
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : 'Could not save settings.')
+      setError(errorText(e, t, 'settings.save_failed'))
     }
   }
 
@@ -33,101 +47,161 @@ export function SettingsPage() {
     try {
       await authApi.changePassword(pw.current, pw.next)
       setPw({ current: '', next: '' })
-      setSaved('Password changed.')
+      setSaved(t('settings.password_changed'))
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Could not change the password.')
+      setError(errorText(err, t, 'settings.password_failed'))
     }
   }
 
   async function deleteAccount(e: FormEvent) {
     e.preventDefault()
-    if (!confirm('Delete your account, every recording and every report? This cannot be undone.')) return
+    if (!confirm(t('settings.confirm_delete'))) return
     try {
       await authApi.deleteAccount(deletePw)
       setUser(null)
       navigate('/login')
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Could not delete the account.')
+      setError(errorText(err, t, 'settings.delete_failed'))
     }
   }
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
-      <h1 className="text-2xl font-semibold">Settings</h1>
+      <h1 className="text-2xl font-semibold">{t('settings.title')}</h1>
       {saved && <p className="rounded-md bg-emerald-50 px-4 py-2 text-sm text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200">{saved}</p>}
       {error && <p role="alert" className="rounded-md bg-red-50 px-4 py-2 text-sm text-red-800 dark:bg-red-950 dark:text-red-200">{error}</p>}
 
       <section className={card}>
-        <h2 className="mb-3 font-semibold">Analysis</h2>
-        <label className="block text-sm font-medium">
-          Language
-          <select value={settings.language} onChange={(e) => void save({ ...settings, language: e.target.value as 'en' })} className={input}>
-            <option value="en">English</option>
-          </select>
-          <span className="mt-1 block text-xs font-normal text-slate-500">More languages can be added later; the app is built for it.</span>
-        </label>
-        <fieldset className="mt-4">
-          <legend className="text-sm font-medium">Speed vs accuracy</legend>
+        <h2 className="mb-3 font-semibold">{t('settings.language_section')}</h2>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <label className="block text-sm font-medium">
+            {t('settings.ui_language')}
+            <select
+              value={settings.ui_language}
+              onChange={(e) => {
+                const l = e.target.value as Lang
+                setLang(l)
+                void save({ ...settings, ui_language: l })
+              }}
+              className={input}
+            >
+              {LANGS.map((l) => (
+                <option key={l} value={l} lang={l}>
+                  {t(`lang.${l}`)}
+                </option>
+              ))}
+            </select>
+            <span className="mt-1 block text-xs font-normal text-slate-500">{t('settings.ui_language_hint')}</span>
+          </label>
+          <label className="block text-sm font-medium">
+            {t('settings.speech_language')}
+            <select value={settings.language} onChange={(e) => void save({ ...settings, language: e.target.value as Lang })} className={input}>
+              {LANGS.map((l) => (
+                <option key={l} value={l} lang={l}>
+                  {t(`lang.${l}`)}
+                </option>
+              ))}
+            </select>
+            <span className="mt-1 block text-xs font-normal text-slate-500">{t('settings.speech_language_hint')}</span>
+          </label>
+        </div>
+      </section>
+
+      <section className={card}>
+        <h2 className="mb-3 font-semibold">{t('settings.analysis')}</h2>
+        <fieldset>
+          <legend className="text-sm font-medium">{t('settings.speed')}</legend>
           <div className="mt-2 grid grid-cols-3 gap-2">
             {(
               [
-                ['fast', 'Fast', 'Whisper base'],
-                ['balanced', 'Balanced', 'Whisper small'],
-                ['accurate', 'Accurate', 'Whisper large-v3-turbo'],
-              ] as [ModelPreset, string, string][]
-            ).map(([value, label, hint]) => (
+                ['fast', 'Whisper base'],
+                ['balanced', 'Whisper small'],
+                ['accurate', 'Whisper large-v3-turbo'],
+              ] as [ModelPreset, string][]
+            ).map(([value, hint]) => (
               <button
                 key={value}
                 type="button"
                 onClick={() => void save({ ...settings, model_preset: value })}
-                className={`rounded-md border px-3 py-2 text-left text-sm ${settings.model_preset === value ? 'border-brand-600 bg-brand-50 dark:bg-slate-800' : 'border-slate-300 dark:border-slate-700'}`}
+                className={`rounded-md border px-3 py-2 text-start text-sm ${settings.model_preset === value ? 'border-brand-600 bg-brand-600 text-white' : 'border-slate-300 dark:border-slate-700'}`}
               >
-                <span className="block font-medium">{label}</span>
-                <span className="block text-xs text-slate-500">{hint}</span>
+                <span className="block font-medium">{t(`preset.${value}`)}</span>
+                <span className="block text-xs opacity-75">{hint}</span>
               </button>
             ))}
           </div>
         </fieldset>
       </section>
 
+      <section id="goals" className={card}>
+        <h2 className="font-semibold">{t('goal.settings_title')}</h2>
+        <p className="mb-3 text-xs text-slate-500">{t('goal.settings_hint')}</p>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault()
+            void save({ ...settings, goals })
+          }}
+          className="grid gap-3 sm:grid-cols-3"
+        >
+          {GOAL_FIELDS.map((f) => (
+            <label key={f.key} className="text-sm font-medium">
+              {t(f.label)}
+              <input
+                type="number"
+                inputMode="decimal"
+                min={f.min}
+                max={f.max}
+                step={f.step}
+                value={goals[f.key] ?? ''}
+                onChange={(e) => setGoals({ ...goals, [f.key]: e.target.value === '' ? null : Number(e.target.value) })}
+                className={input}
+              />
+            </label>
+          ))}
+          <div className="flex items-end">
+            <button className="btn-primary">{t('goal.save')}</button>
+          </div>
+        </form>
+      </section>
+
       <section className={card}>
-        <h2 className="mb-3 font-semibold">Privacy</h2>
+        <h2 className="mb-3 font-semibold">{t('settings.privacy')}</h2>
         <label className="flex items-start gap-3 text-sm">
           <input type="checkbox" className="mt-1" checked={settings.auto_delete_video} onChange={(e) => void save({ ...settings, auto_delete_video: e.target.checked })} />
           <span>
-            <span className="font-medium">Delete the video after analysis</span>
-            <span className="block text-slate-500">Keeps your report and transcript, removes the recording and audio from this computer.</span>
+            <span className="font-medium">{t('settings.auto_delete')}</span>
+            <span className="block text-slate-500">{t('settings.auto_delete_hint')}</span>
           </span>
         </label>
       </section>
 
       <section className={card}>
-        <h2 className="mb-3 font-semibold">Password</h2>
+        <h2 className="mb-3 font-semibold">{t('settings.password')}</h2>
         <form onSubmit={(e) => void changePassword(e)} className="grid gap-3 sm:grid-cols-2">
           <label className="text-sm font-medium">
-            Current password
+            {t('settings.current_password')}
             <input type="password" autoComplete="current-password" required value={pw.current} onChange={(e) => setPw({ ...pw, current: e.target.value })} className={input} />
           </label>
           <label className="text-sm font-medium">
-            New password
+            {t('settings.new_password')}
             <input type="password" autoComplete="new-password" required minLength={8} value={pw.next} onChange={(e) => setPw({ ...pw, next: e.target.value })} className={input} />
           </label>
-          <button className="w-fit rounded-md border border-slate-300 px-4 py-2 text-sm font-medium dark:border-slate-700">Change password</button>
+          <button className="w-fit rounded-md border border-slate-300 px-4 py-2 text-sm font-medium dark:border-slate-700">{t('settings.change_password')}</button>
         </form>
       </section>
 
       <section className={`${card} border-red-200 dark:border-red-900`}>
-        <h2 className="mb-1 font-semibold text-red-700 dark:text-red-400">Delete account</h2>
-        <p className="mb-3 text-sm text-slate-500">Deletes your account, every recording, transcript and report from this computer.</p>
+        <h2 className="mb-1 font-semibold text-red-700 dark:text-red-400">{t('settings.delete_account')}</h2>
+        <p className="mb-3 text-sm text-slate-500">{t('settings.delete_account_hint')}</p>
         <form onSubmit={(e) => void deleteAccount(e)} className="flex flex-wrap items-end gap-3">
           <label className="text-sm font-medium">
-            Your password
+            {t('settings.your_password')}
             <input type="password" autoComplete="current-password" required value={deletePw} onChange={(e) => setDeletePw(e.target.value)} className={input} />
           </label>
-          <button className="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700">Delete everything</button>
+          <button className="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700">{t('settings.delete_everything')}</button>
         </form>
       </section>
-      <p className="text-xs text-slate-400">Signed in as {user?.email}</p>
+      <p className="text-xs text-slate-400">{t('settings.signed_in_as', { email: user?.email ?? '' })}</p>
     </div>
   )
 }

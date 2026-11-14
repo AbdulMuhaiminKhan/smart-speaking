@@ -1,6 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 import { authApi, setUnauthorizedHandler, type User } from '../api/client'
+import { useI18n } from '../i18n'
+import { isLang } from '../i18n/core'
 
 interface AuthState {
   user: User | null
@@ -14,6 +16,13 @@ const AuthContext = createContext<AuthState | null>(null)
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
+  const { setLang } = useI18n()
+
+  // The account's app language wins over the browser default once signed in.
+  const uiLang = user?.settings.ui_language
+  useEffect(() => {
+    if (isLang(uiLang)) setLang(uiLang)
+  }, [uiLang, setLang])
 
   useEffect(() => {
     authApi
@@ -44,7 +53,8 @@ export function useAuth(): AuthState {
 export function RequireAuth({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth()
   const location = useLocation()
-  if (loading) return <p className="p-8 text-slate-500">Loading…</p>
+  const { t } = useI18n()
+  if (loading) return <p className="p-8 text-slate-500">{t('common.loading')}</p>
   if (!user) return <Navigate to="/login" replace state={{ from: location.pathname }} />
   return <>{children}</>
 }

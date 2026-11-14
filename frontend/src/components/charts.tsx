@@ -1,5 +1,6 @@
 // Small dependency-free SVG charts used by the report.
 import type { TimePoint } from '../api/client'
+import { useI18n } from '../i18n'
 import { formatTime } from '../lib/format'
 
 interface LineChartProps {
@@ -22,6 +23,7 @@ const PAD_T = 12
 const PAD_B = 24
 
 export function LineChart({ title, points, unit, band, bandLabel, yMin, yMax, format = (v) => v.toFixed(0), onSeek }: LineChartProps) {
+  const { t } = useI18n()
   const pts = points.filter((p): p is { t: number; value: number } => p.value !== null)
   if (pts.length < 2) return null
   const t0 = Math.min(...points.map((p) => p.t))
@@ -52,6 +54,7 @@ export function LineChart({ title, points, unit, band, bandLabel, yMin, yMax, fo
       <figcaption className="mb-1 text-sm font-medium">{title}</figcaption>
       <svg
         viewBox={`0 0 ${W} ${H}`}
+        direction="ltr"
         className="w-full cursor-pointer"
         role="img"
         aria-label={title}
@@ -91,8 +94,8 @@ export function LineChart({ title, points, unit, band, bandLabel, yMin, yMax, fo
       </svg>
       <p className="text-xs text-slate-500">
         {unit}
-        {bandLabel ? ` · green band: ${bandLabel}` : ''}
-        {onSeek ? ' · click to jump the video' : ''}
+        {bandLabel ? ` · ${t('chart.green_band', { label: bandLabel })}` : ''}
+        {onSeek ? ` · ${t('chart.click_jump')}` : ''}
       </p>
     </figure>
   )
@@ -103,6 +106,7 @@ interface RadarProps {
 }
 
 export function Radar({ items }: RadarProps) {
+  const { t } = useI18n()
   const S = 300
   const C = S / 2
   const R = 105
@@ -115,7 +119,7 @@ export function Radar({ items }: RadarProps) {
     .map(([px, py], i) => `${i ? 'L' : 'M'}${px.toFixed(1)} ${py.toFixed(1)}`)
     .join(' ')
   return (
-    <svg viewBox={`0 0 ${S} ${S}`} className="mx-auto w-full max-w-xs" role="img" aria-label="Category scores radar chart">
+    <svg viewBox={`0 0 ${S} ${S}`} className="mx-auto w-full max-w-xs" role="img" aria-label={t('report.radar_label')}>
       {rings.map((r) => (
         <polygon
           key={r}

@@ -1,7 +1,19 @@
 // Typed client for the SmartSpeaking API. Mirrors backend/app/schemas.
 
 export type SessionStatus = 'uploaded' | 'queued' | 'processing' | 'completed' | 'failed'
-export type SessionMode = 'free_talk' | 'timed_pitch' | 'script'
+export type SessionMode =
+  | 'free_talk'
+  | 'timed_pitch'
+  | 'script'
+  | 'impromptu'
+  | 'elevator_pitch'
+  | 'interview'
+  | 'table_topics'
+
+export interface Prompt {
+  t: number
+  text: string
+}
 export type ModelPreset = 'fast' | 'balanced' | 'accurate'
 
 export interface PracticeSession {
@@ -10,7 +22,8 @@ export interface PracticeSession {
   source: 'upload' | 'live'
   mode: SessionMode
   target_seconds: number | null
-  language: string
+  prompts: Prompt[]
+  language: Lang
   model_preset: ModelPreset
   original_filename: string
   size_bytes: number
@@ -98,6 +111,22 @@ export const api = {
   retry: (id: string) => request<PracticeSession>(`/api/sessions/${id}/retry`, { method: 'POST' }),
   deleteSession: (id: string) => request<void>(`/api/sessions/${id}`, { method: 'DELETE' }),
   mediaUrl: (id: string) => `/api/sessions/${id}/media`,
+  notes: (id: string) => request<Note[]>(`/api/sessions/${id}/annotations`),
+  addNote: (id: string, t: number, text: string) => request<Note>(`/api/sessions/${id}/annotations`, jsonBody('POST', { t, text })),
+  editNote: (id: string, noteId: string, t: number, text: string) =>
+    request<Note>(`/api/sessions/${id}/annotations/${noteId}`, jsonBody('PUT', { t, text })),
+  deleteNote: (id: string, noteId: string) => request<void>(`/api/sessions/${id}/annotations/${noteId}`, { method: 'DELETE' }),
+}
+
+export interface Note {
+  id: string
+  t: number
+  text: string
+  created_at: string
+}
+
+function jsonBody(method: string, body: unknown): RequestInit {
+  return { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }
 }
 
 export interface UploadOptions {
@@ -108,6 +137,7 @@ export interface UploadOptions {
   mode?: SessionMode
   targetSeconds?: number
   scriptText?: string
+  prompts?: Prompt[]
   language?: string
   modelPreset?: ModelPreset
   onProgress?: (fraction: number) => void
@@ -123,6 +153,7 @@ export function uploadSession(opts: UploadOptions): Promise<PracticeSession> {
   form.append('mode', opts.mode ?? 'free_talk')
   if (opts.targetSeconds) form.append('target_seconds', String(opts.targetSeconds))
   if (opts.scriptText) form.append('script_text', opts.scriptText)
+  if (opts.prompts?.length) form.append('prompts', JSON.stringify(opts.prompts))
   form.append('language', opts.language ?? 'en')
   form.append('model_preset', opts.modelPreset ?? 'balanced')
 
@@ -183,10 +214,12 @@ export interface Issue {
   severity: 'info' | 'minor' | 'major'
   message: string
   text: string | null
+  value?: number | null
 }
 
 export interface Report {
   generated_by: 'template' | 'llm'
+  language?: Lang
   llm_model: string | null
   llm_error: string | null
   summary: string | null
@@ -216,12 +249,29 @@ export interface TimePoint {
 
 export interface PacingResult {
   wpm_overall: number
+  wpm_articulation: number
   wpm_series: TimePoint[]
+  wpm_variability: number
   pauses: { start: number; end: number; duration: number; kind: 'effective' | 'awkward' | 'hesitation' }[]
+  pause_count: number
+  awkward_pause_count: number
+  effective_pause_count: number
+  pause_ratio: number
+  longest_pause_s: number
+  speaking_time_s: number
 }
 
 export interface VoiceResult {
+  pitch_median_hz: number | null
+  pitch_std_semitones: number | null
+  pitch_range_semitones: number | null
+  monotone: boolean
   pitch_series: TimePoint[]
+  pitch_variation_series?: TimePoint[]
+  intensity_mean_db: number | null
+  intensity_std_db: number | null
+  quiet_ratio: number
+  energy_trend_db_per_min: number | null
   volume_series: TimePoint[]
   tone: string
   tone_reasons: string[]
@@ -236,6 +286,20 @@ export interface EmotionPoint {
 export interface BodyResult {
   eye_contact_series: TimePoint[]
   eye_contact_ratio: number | null
+  face_detected_ratio: number
+  pose_detected_ratio: number
+  slouch_ratio: number | null
+  head_down_ratio: number | null
+  tilt_ratio: number | null
+  lean_ratio: number | null
+  hands_visible_ratio: number | null
+  gestures_per_min: number | null
+  open_gesture_ratio: number | null
+  arms_crossed_ratio: number | null
+  face_touch_count: number
+  fidget_ratio: number | null
+  sway_ratio: number | null
+  smile_ratio: number | null
   emotions: Record<string, number>
   emotion_timeline: EmotionPoint[]
 }
@@ -246,21 +310,49 @@ export interface VoiceEmotionResult {
   timeline: EmotionPoint[]
 }
 
+export interface ScriptPart {
+  kind: 'said' | 'skipped' | 'added' | 'changed'
+  script: string
+  spoken: string
+  start: number
+  end: number
+}
+
+export interface LanguageResult {
+  word_count: number
+  fillers_per_min: number
+  filler_counts: Record<string, number>
+  script: { coverage: number; extra_ratio: number; skipped: string[]; added: string[]; parts?: ScriptPart[] } | null
+}
+
 const optional = <T,>(p: Promise<T>): Promise<T | null> => p.catch(() => null)
 
 export const reportApi = {
   getReport: (id: string) => request<Report>(`/api/sessions/${id}/results/report`),
   getPacing: (id: string) => request<PacingResult>(`/api/sessions/${id}/results/pacing`),
+  getLanguage: (id: string) => optional(request<LanguageResult>(`/api/sessions/${id}/results/language`)),
   getVoice: (id: string) => optional(request<VoiceResult>(`/api/sessions/${id}/results/voice`)),
   getBody: (id: string) => optional(request<BodyResult>(`/api/sessions/${id}/results/body`)),
   getVoiceEmotion: (id: string) => optional(request<VoiceEmotionResult>(`/api/sessions/${id}/results/voice_emotion`)),
-  pdfUrl: (id: string) => `/api/sessions/${id}/report.pdf`,
+  pdfUrl: (id: string, lang?: string) => `/api/sessions/${id}/report.pdf${lang ? `?lang=${lang}` : ''}`,
 }
 
 // ---- Accounts and progress (Phase 6) ----
 
+export type Lang = 'en' | 'de' | 'ur'
+
+export interface Goals {
+  sessions_per_week: number | null
+  max_fillers_per_min: number | null
+  wpm_low: number | null
+  wpm_high: number | null
+  min_score: number | null
+}
+
 export interface UserSettings {
-  language: 'en'
+  language: Lang
+  ui_language: Lang
+  goals: Goals
   model_preset: ModelPreset
   auto_delete_video: boolean
 }
@@ -273,6 +365,21 @@ export interface User {
   created_at: string
 }
 
+export interface SessionMetrics {
+  words: number
+  speaking_s: number
+  wpm: number | null
+  fillers_per_min: number | null
+  filler_count: number
+  clarity_pct: number | null
+  pitch_variation_st: number | null
+  monotone: boolean | null
+  pause_ratio: number | null
+  eye_contact_pct: number | null
+  gestures_per_min: number | null
+  script_coverage_pct: number | null
+}
+
 export interface SessionScores {
   id: string
   title: string
@@ -280,6 +387,9 @@ export interface SessionScores {
   duration_s: number | null
   overall: number | null
   categories: Partial<Record<Category, number | null>>
+  mode: SessionMode
+  language: Lang
+  metrics: SessionMetrics | null
 }
 
 export interface Progress {
@@ -290,6 +400,28 @@ export interface Progress {
   latest: number | null
   change: number | null
   category_change: Partial<Record<Category, number | null>>
+}
+
+export interface Achievement {
+  id: string
+  earned: boolean
+  earned_at: string | null
+  session_id: string | null
+  progress: number
+}
+
+export interface GoalStatus {
+  id: 'sessions_per_week' | 'fillers' | 'pace' | 'score'
+  target: string
+  current: number | null
+  met: boolean
+}
+
+export interface Achievements {
+  streak: { current: number; best: number; days: string[] }
+  week_sessions: number
+  goals: GoalStatus[]
+  achievements: Achievement[]
 }
 
 const json = (method: string, body: unknown): RequestInit => ({
@@ -309,4 +441,6 @@ export const authApi = {
     request<void>('/api/auth/me/password', json('POST', { current_password, new_password })),
   deleteAccount: (password: string) => request<void>('/api/auth/me', json('DELETE', { password })),
   progress: () => request<Progress>('/api/progress'),
+  achievements: () =>
+    request<Achievements>(`/api/progress/achievements?tz=${encodeURIComponent(Intl.DateTimeFormat().resolvedOptions().timeZone)}`),
 }

@@ -1,5 +1,14 @@
-# English lexicon for the language step. One file per language (en.yaml, es.yaml, ...).
-# Phrases are lowercase and matched on whole words, longest first.
+# English lexicon for the language step. One file per language (en.yaml, de.yaml, ur.yaml).
+# Phrases are matched on whole normalized words, longest first.
+
+# Whisper drops fillers unless the prompt is written in a disfluent style.
+whisper_prompt: >-
+  Umm, so, uh, I was like, you know, thinking about it. Hmm, basically,
+  I mean, it's, uh, sort of... actually, okay, um, let me start.
+
+# Words with the special "like" rules below.
+like_words:
+  - like
 
 fillers:
   # Always counted as fillers.

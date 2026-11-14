@@ -1,33 +1,36 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { api, ApiError, type PracticeSession } from '../api/client'
+import { api, type PracticeSession } from '../api/client'
 import { StatusBadge } from '../components/StatusBadge'
+import { useI18n } from '../i18n'
+import { errorText } from '../lib/errors'
 import { formatTime } from '../lib/format'
 
 export function SessionsPage() {
   const [sessions, setSessions] = useState<PracticeSession[] | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const { t, formatDate } = useI18n()
 
   useEffect(() => {
     api
       .listSessions()
       .then(setSessions)
-      .catch((e: unknown) => setError(e instanceof ApiError ? e.message : 'Could not load sessions.'))
+      .catch((e: unknown) => setError(errorText(e, t, 'err.load_sessions')))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   if (error) return <p className="text-red-700 dark:text-red-300">{error}</p>
-  if (!sessions) return <p className="text-slate-500">Loading…</p>
+  if (!sessions) return <p className="text-slate-500">{t('common.loading')}</p>
 
   return (
     <div>
-      <h1 className="text-2xl font-semibold">Your sessions</h1>
+      <h1 className="text-2xl font-semibold">{t('sessions.title')}</h1>
       {sessions.length === 0 ? (
         <p className="mt-4 text-slate-600 dark:text-slate-400">
-          No sessions yet.{' '}
+          {t('sessions.empty')}{' '}
           <Link to="/upload" className="text-brand-600">
-            Upload your first recording
+            {t('sessions.upload_first')}
           </Link>
-          .
         </p>
       ) : (
         <ul className="mt-6 divide-y divide-slate-200 overflow-hidden rounded-xl border border-slate-200 bg-white dark:divide-slate-800 dark:border-slate-800 dark:bg-slate-900">
@@ -40,7 +43,7 @@ export function SessionsPage() {
                 <div>
                   <p className="font-medium">{s.title}</p>
                   <p className="text-sm text-slate-500">
-                    {new Date(s.created_at).toLocaleString()}
+                    {formatDate(s.created_at)}
                     {s.duration_s !== null && ` · ${formatTime(s.duration_s)}`}
                   </p>
                 </div>
@@ -48,18 +51,18 @@ export function SessionsPage() {
                   <StatusBadge status={s.status} />
                   <button
                     type="button"
-                    aria-label={`Delete ${s.title}`}
+                    aria-label={t('sessions.delete_label', { title: s.title })}
                     onClick={(e) => {
                       e.preventDefault()
-                      if (!confirm(`Delete "${s.title}" and its recording? This cannot be undone.`)) return
+                      if (!confirm(t('sessions.confirm_delete', { title: s.title }))) return
                       api
                         .deleteSession(s.id)
                         .then(() => setSessions((all) => all?.filter((x) => x.id !== s.id) ?? null))
-                        .catch(() => setError('Delete failed.'))
+                        .catch(() => setError(t('err.delete_failed')))
                     }}
                     className="rounded px-2 py-1 text-xs text-slate-400 hover:bg-red-50 hover:text-red-700 dark:hover:bg-red-950"
                   >
-                    Delete
+                    {t('common.delete')}
                   </button>
                 </div>
               </Link>

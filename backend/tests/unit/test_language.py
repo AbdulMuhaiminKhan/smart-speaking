@@ -99,3 +99,19 @@ def test_normalize() -> None:
 
 def test_repetition_across_sentence_break_is_not_a_stumble() -> None:
     assert run("We start with heating. Heating is costly.").repetitions == []
+
+
+def test_script_drift_parts_have_times() -> None:
+    script = "Good morning. Today I will show three ideas about saving energy at home. Thank you."
+    spoken = (
+        "Um, good morning. Today I will show three ideas. Let me tell a quick story. Thank you."
+    )
+    m = run(spoken, script_text=script)
+    assert m.script is not None
+    kinds = [p.kind for p in m.script.parts]
+    assert kinds[0] == "said" and kinds[-1] == "said"
+    assert {"changed"} <= set(kinds) or {"skipped", "added"} <= set(kinds)
+    said = m.script.parts[0]
+    assert said.script.startswith("Good morning") and said.start > 0  # after the "Um"
+    gap = next(p for p in m.script.parts if p.kind != "said")
+    assert "saving" in gap.script and gap.start >= said.end

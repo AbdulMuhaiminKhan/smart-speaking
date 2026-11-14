@@ -20,6 +20,14 @@ FILLER_PROMPT = (
     "I mean, it's, uh, sort of... actually, okay, um, let me start."
 )
 
+
+def filler_prompt(language: str | None) -> str:
+    """The disfluent prompt for this language, from its lexicon file."""
+    from app.pipeline.language import load_lexicon
+
+    return load_lexicon(language or "en").whisper_prompt or FILLER_PROMPT
+
+
 ProgressFn = Callable[[float], None]
 
 
@@ -155,7 +163,7 @@ def run(
         load_wav(audio_path),
         language=language,
         word_timestamps=True,
-        initial_prompt=FILLER_PROMPT,
+        initial_prompt=filler_prompt(language),
         condition_on_previous_text=False,
         vad_filter=False,  # keep silences and fillers; pauses are measured later
         beam_size=5,

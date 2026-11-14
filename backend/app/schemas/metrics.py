@@ -23,6 +23,9 @@ class Issue(BaseModel):
     severity: Severity
     message: str
     text: str | None = None  # the words involved, when there are any
+    # The number in the message (seconds, words per minute), so the app can
+    # show the message in other languages.
+    value: float | None = None
 
 
 class TimePoint(BaseModel):
@@ -70,6 +73,7 @@ class VoiceMetrics(BaseModel):
     pitch_range_semitones: float | None  # 5th to 95th percentile
     monotone: bool
     pitch_series: list[TimePoint]  # median Hz per second, None when unvoiced
+    pitch_variation_series: list[TimePoint] = []  # semitone spread in a 5 s window
     intensity_mean_db: float | None
     intensity_std_db: float | None
     volume_series: list[TimePoint]  # mean dB per second while speaking
@@ -90,11 +94,22 @@ class Occurrence(BaseModel):
     word_index: int
 
 
+class ScriptPart(BaseModel):
+    """One stretch of the script aligned with the speech, in script order."""
+
+    kind: Literal["said", "skipped", "added", "changed"]
+    script: str  # the script words (empty for "added")
+    spoken: str  # the spoken words (empty for "skipped")
+    start: float  # when it happened; for skipped text, where in the talk it was left out
+    end: float
+
+
 class ScriptComparison(BaseModel):
     coverage: float  # share of script words that were said, in order
     extra_ratio: float  # share of spoken words not in the script
     skipped: list[str]  # script passages that were left out
     added: list[str]  # spoken passages that were not in the script
+    parts: list[ScriptPart] = []  # the whole script, aligned, for the drift view
 
 
 class LanguageMetrics(BaseModel):

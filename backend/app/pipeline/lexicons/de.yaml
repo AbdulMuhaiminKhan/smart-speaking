@@ -1,0 +1,184 @@
+# German lexicon for the language step. Phrases are matched on whole normalized
+# words (lowercase, no punctuation), longest first.
+
+# Whisper drops fillers unless the prompt is written in a disfluent style.
+whisper_prompt: >-
+  Ähm, also, äh, ich hab halt, sag ich mal, so überlegt. Hm, eigentlich,
+  ich meine, das ist, äh, sozusagen... genau, okay, ähm, ich fang mal an.
+
+fillers:
+  # Always counted as fillers.
+  always:
+    - äh
+    - ähm
+    - ääh
+    - öh
+    - öhm
+    - eh
+    - ehm
+    - hm
+    - hmm
+    - mhm
+    - halt
+    - sozusagen
+    - quasi
+    - irgendwie
+    - eigentlich
+    - praktisch
+    - sag ich mal
+    - ich sag mal
+    - ich meine
+    - weißt du
+    - weißte
+    - na ja
+    - naja
+    - oder so
+  # Counted only at the start of a sentence and followed by a comma ("Also, ...").
+  contextual:
+    - also
+    - so
+    - ja
+    - genau
+    - gut
+    - okay
+    - tja
+
+hedges:
+  - ich bin mir nicht sicher
+  - ich weiß nicht
+  - in gewisser weise
+  - mehr oder weniger
+  - unter umständen
+  - ich würde sagen
+  - ein bisschen
+  - ein wenig
+  - ich glaube
+  - ich denke
+  - ich finde
+  - vielleicht
+  - wahrscheinlich
+  - eventuell
+  - möglicherweise
+  - hoffentlich
+  - gewissermaßen
+  - ziemlich
+  - eher
+
+stopwords:
+  - der
+  - die
+  - das
+  - den
+  - dem
+  - des
+  - ein
+  - eine
+  - einer
+  - eines
+  - einem
+  - einen
+  - und
+  - oder
+  - aber
+  - wenn
+  - als
+  - wie
+  - dass
+  - zu
+  - zum
+  - zur
+  - von
+  - vom
+  - mit
+  - bei
+  - beim
+  - aus
+  - nach
+  - für
+  - auf
+  - an
+  - in
+  - im
+  - am
+  - um
+  - über
+  - unter
+  - vor
+  - durch
+  - ist
+  - sind
+  - war
+  - waren
+  - sein
+  - bin
+  - bist
+  - seid
+  - hat
+  - haben
+  - habe
+  - hab
+  - hatte
+  - hatten
+  - wird
+  - werden
+  - wurde
+  - ich
+  - du
+  - er
+  - sie
+  - es
+  - wir
+  - ihr
+  - mich
+  - mir
+  - dich
+  - dir
+  - sich
+  - uns
+  - euch
+  - mein
+  - meine
+  - dein
+  - deine
+  - ihre
+  - unser
+  - unsere
+  - nicht
+  - kein
+  - keine
+  - ja
+  - nein
+  - auch
+  - noch
+  - schon
+  - nur
+  - so
+  - sehr
+  - dann
+  - da
+  - hier
+  - dort
+  - was
+  - wer
+  - wo
+  - wann
+  - warum
+  - welche
+  - welcher
+  - dieser
+  - diese
+  - dieses
+  - man
+  - kann
+  - können
+  - muss
+  - müssen
+  - soll
+  - sollen
+  - will
+  - wollen
+  - mal
+  - doch
+  - denn
+  - also
+  - gibt

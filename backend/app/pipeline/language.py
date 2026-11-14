@@ -1,7 +1,7 @@
 """Step 4: filler words, hedges, repetition, vocabulary, sentences and script match.
 
-Word lists live in lexicons/<lang>.yaml so other languages can be added
-without code changes. Sentence clarity feedback comes from the LLM in Phase 5.
+Word lists live in lexicons/<lang>.yaml (en, de, ur) so other languages can be
+added without code changes. Sentence clarity feedback comes from the LLM.
 """
 
 from __future__ import annotations
@@ -16,7 +16,7 @@ from typing import Any
 
 import yaml
 
-from app.schemas.metrics import LanguageMetrics, Occurrence, ScriptComparison
+from app.schemas.metrics import LanguageMetrics, Occurrence, ScriptComparison, ScriptPart
 from app.schemas.transcript import Transcript, Word
 
 LEXICON_DIR = Path(__file__).parent / "lexicons"
@@ -26,8 +26,14 @@ OVERUSE_MIN_COUNT = 4
 OVERUSE_MIN_SHARE = 0.02
 SCRIPT_GAP_MIN_WORDS = 3
 
+SUPPORTED_LANGUAGES = ("en", "de", "ur")
+
 _PUNCT = re.compile(r"[^\w']+", re.UNICODE)
-_SENTENCE_END = (".", "?", "!")
+# Latin plus the Urdu full stop (U+06D4) and question mark (U+061F).
+_SENTENCE_END = (".", "?", "!", "\u06d4", "\u061f")
+_COMMAS = (",", "\u060c", "\u2026", "...")  # includes the Arabic-script comma
+# Arabic code points Whisper sometimes writes in place of the Urdu letters.
+_URDU_LETTERS = str.maketrans({"\u064a": "\u06cc", "\u0649": "\u06cc", "\u0643": "\u06a9"})
 
 
 @dataclass(frozen=True)
@@ -38,11 +44,19 @@ class Lexicon:
     like_quotative_after: frozenset[str]
     hedges: tuple[tuple[str, ...], ...]
     stopwords: frozenset[str]
+    whisper_prompt: str = ""
+    # Words like English "like" with their own rules (see is_contextual_filler).
+    like_words: frozenset[str] = frozenset()
 
 
 def _phrases(items: list[str]) -> tuple[tuple[str, ...], ...]:
     # Longest phrases first so "i think maybe" wins over "i think".
-    return tuple(sorted((tuple(p.split()) for p in items), key=len, reverse=True))
+    tokens = (tuple(t for t in (normalize(x) for x in p.split()) if t) for p in items)
+    return tuple(sorted((t for t in tokens if t), key=len, reverse=True))
+
+
+def _words(items: list[str] | None) -> frozenset[str]:
+    return frozenset(n for n in (normalize(x) for x in items or []) if n)
 
 
 @lru_cache
@@ -50,23 +64,27 @@ def load_lexicon(language: str = "en") -> Lexicon:
     path = LEXICON_DIR / f"{language}.yaml"
     if not path.exists():
         path = LEXICON_DIR / "en.yaml"
-    data: dict[str, Any] = yaml.safe_load(path.read_text())
+    # BaseLoader keeps every value a string ("no" and "yes" are words, not booleans).
+    data: dict[str, Any] = yaml.load(path.read_text(encoding="utf-8"), Loader=yaml.BaseLoader)
     return Lexicon(
         fillers_always=_phrases(data["fillers"]["always"]),
-        fillers_contextual=frozenset(data["fillers"]["contextual"]),
-        like_not_after=frozenset(data.get("like_not_filler_after", [])),
-        like_quotative_after=frozenset(data.get("like_quotative_after", [])),
+        fillers_contextual=_words(data["fillers"].get("contextual")),
+        like_not_after=_words(data.get("like_not_filler_after")),
+        like_quotative_after=_words(data.get("like_quotative_after")),
         hedges=_phrases(data["hedges"]),
-        stopwords=frozenset(data["stopwords"]),
+        stopwords=_words(data["stopwords"]),
+        whisper_prompt=str(data.get("whisper_prompt", "")).strip(),
+        like_words=_words(data.get("like_words")),
     )
 
 
 def normalize(text: str) -> str:
-    return _PUNCT.sub("", text.lower().replace("’", "'"))
+    """Lowercase, drop punctuation and Arabic-script diacritics, unify Urdu letters."""
+    return _PUNCT.sub("", text.lower().replace("\u2019", "'").translate(_URDU_LETTERS))
 
 
 def _has_comma(raw: str) -> bool:
-    return raw.rstrip().endswith((",", "…", "..."))
+    return raw.rstrip().endswith(_COMMAS)
 
 
 def _sentence_start(words: list[Word], i: int) -> bool:
@@ -105,16 +123,15 @@ def is_contextual_filler(words: list[Word], norm: list[str], i: int, lex: Lexico
     prev = norm[i - 1] if i > 0 else ""
     prev_comma = i > 0 and _has_comma(words[i - 1].text)
     own_comma = _has_comma(words[i].text)
-    if w == "like":
+    if w in lex.like_words:
         if prev in lex.like_quotative_after:
             return True
         if prev in lex.like_not_after:
             return False
         return prev_comma or own_comma
-    if w in {"so", "well"}:
-        # "So, ..." or "Well, ..." at the start of a sentence.
-        return _sentence_start(words, i) and own_comma
-    return False
+    # Other contextual words ("So, ...", "Also, ...", "اچھا، ...") count only at the
+    # start of a sentence and followed by a comma.
+    return _sentence_start(words, i) and own_comma
 
 
 def find_fillers(words: list[Word], norm: list[str], lex: Lexicon) -> list[Occurrence]:
@@ -133,7 +150,7 @@ def find_fillers(words: list[Word], norm: list[str], lex: Lexicon) -> list[Occur
 
 def _ends_phrase(raw: str) -> bool:
     # "Heating. Heating is..." repeats on purpose across a break; not a stumble.
-    return raw.rstrip("\"')").endswith((*_SENTENCE_END, ",", ";", ":"))
+    return raw.rstrip("\"')").endswith((*_SENTENCE_END, ",", ";", ":", "\u060c", "\u061b"))
 
 
 def find_repetitions(words: list[Word], norm: list[str], skip: set[int]) -> list[Occurrence]:
@@ -198,24 +215,58 @@ def split_sentences(words: list[Word]) -> list[tuple[int, int]]:
     return out
 
 
-def compare_script(script: str, spoken: list[str]) -> ScriptComparison:
-    expected = [t for t in (normalize(x) for x in script.split()) if t]
+def compare_script(
+    script: str,
+    spoken: list[str],
+    *,
+    spoken_display: list[str] | None = None,
+    times: list[tuple[float, float]] | None = None,
+) -> ScriptComparison:
+    """Align the script with what was said. `spoken` holds normalized words; the
+    optional display words and (start, end) times let the app show where you drifted."""
+    raw = [x for x in script.split() if normalize(x)]
+    expected = [normalize(x) for x in raw]
     if not expected:
         return ScriptComparison(coverage=0.0, extra_ratio=0.0, skipped=[], added=[])
+    shown = spoken_display or spoken
     matcher = difflib.SequenceMatcher(None, expected, spoken, autojunk=False)
     matched = sum(b.size for b in matcher.get_matching_blocks())
     skipped: list[str] = []
     added: list[str] = []
+    parts: list[ScriptPart] = []
+
+    def when(j1: int, j2: int) -> tuple[float, float]:
+        if not times:
+            return 0.0, 0.0
+        if j2 > j1:
+            return times[j1][0], times[j2 - 1][1]
+        # Nothing spoken here: place it at the next spoken word (or the last one).
+        k = min(j1, len(times) - 1)
+        t = times[k][0] if j1 < len(times) else times[-1][1]
+        return t, t
+
     for tag, i1, i2, j1, j2 in matcher.get_opcodes():
         if tag in {"delete", "replace"} and i2 - i1 >= SCRIPT_GAP_MIN_WORDS:
             skipped.append(" ".join(expected[i1:i2][:15]))
         if tag in {"insert", "replace"} and j2 - j1 >= SCRIPT_GAP_MIN_WORDS:
             added.append(" ".join(spoken[j1:j2][:15]))
+        start, end = when(j1, j2)
+        kind = {"equal": "said", "delete": "skipped", "insert": "added", "replace": "changed"}[tag]
+        parts.append(
+            ScriptPart(
+                kind=kind,
+                script=" ".join(raw[i1:i2]),
+                spoken=" ".join(shown[j1:j2]),
+                start=round(start, 3),
+                end=round(end, 3),
+            )
+        )
     return ScriptComparison(
         coverage=round(matched / len(expected), 3),
         extra_ratio=round(1 - matched / len(spoken), 3) if spoken else 0.0,
         skipped=skipped,
         added=added,
+        parts=parts,
     )
 
 
@@ -236,7 +287,8 @@ def run(
     hedges = [_occ(words, s, n, norm) for s, n in _match_phrases(norm, lex.hedges, set(filler_idx))]
     repetitions = find_repetitions(words, norm, filler_idx)
 
-    content = [t for i, t in enumerate(norm) if t and i not in filler_idx]
+    content_idx = [i for i, t in enumerate(norm) if t and i not in filler_idx]
+    content = [norm[i] for i in content_idx]
     counts = Counter(t for t in content if t not in lex.stopwords and len(t) > 2)
     threshold = max(OVERUSE_MIN_COUNT, OVERUSE_MIN_SHARE * len(content))
     overused = {w: c for w, c in counts.most_common(10) if c >= threshold}
@@ -269,5 +321,14 @@ def run(
         sentence_count=len(sentences),
         avg_sentence_words=round(sum(lengths) / len(lengths), 1) if lengths else 0.0,
         long_sentences=long_sentences,
-        script=compare_script(script_text, content) if script_text else None,
+        script=(
+            compare_script(
+                script_text,
+                content,
+                spoken_display=[words[i].text.strip() for i in content_idx],
+                times=[(words[i].start, words[i].end) for i in content_idx],
+            )
+            if script_text
+            else None
+        ),
     )

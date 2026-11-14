@@ -1,3 +1,4 @@
+import type { MessageKey } from '../i18n/en'
 // Live body-language checks. Mirrors backend/app/pipeline/body_features.py so
 // the live hints agree with the final report. Thresholds: docs/scoring.md.
 
@@ -32,6 +33,7 @@ export interface PostureCheck {
   tilted: boolean
   leaning: boolean
   label: string
+  labelKey: MessageKey
 }
 
 export function checkPosture(pose: P[], aspect: number): PostureCheck | null {
@@ -56,7 +58,16 @@ export function checkPosture(pose: P[], aspect: number): PostureCheck | null {
   const tilted = tilt > RULES.TILT_DEG
   const leaning = lean !== null && Math.abs(lean) > RULES.LEAN_RATIO
   const label = headDown ? 'Head down' : slouch ? 'Slouching' : tilted ? 'Shoulders tilted' : leaning ? 'Leaning' : 'Posture OK'
-  return { ok: !(slouch || headDown || tilted || leaning), slouch, headDown, tilted, leaning, label }
+  const labelKey: MessageKey = headDown
+    ? 'body.head_down'
+    : slouch
+      ? 'body.slouching'
+      : tilted
+        ? 'body.tilted'
+        : leaning
+          ? 'body.leaning'
+          : 'body.posture_ok'
+  return { ok: !(slouch || headDown || tilted || leaning), slouch, headDown, tilted, leaning, label, labelKey }
 }
 
 export interface Baseline {
@@ -95,6 +106,7 @@ export interface FaceCheck {
   pitch: number
   down: number
   label: string
+  labelKey: MessageKey
 }
 
 /** Head angles from MediaPipe's facial transformation matrix (column-major 4x4). */
@@ -126,7 +138,7 @@ export function checkFace(shapes: Record<string, number>, matrix: number[] | nul
     d < RULES.GAZE_DOWN_MAX
   const smiling = (b('mouthSmileLeft') + b('mouthSmileRight')) / 2 >= RULES.SMILE_MIN
   const { emotion } = faceEmotion(shapes)
-  return { eyeContact, smiling, emotion, yaw, pitch, down, label: eyeContact ? 'Eye contact' : 'Looking away' }
+  return { eyeContact, smiling, emotion, yaw, pitch, down, label: eyeContact ? 'Eye contact' : 'Looking away', labelKey: eyeContact ? 'body.eye_contact' : 'body.looking_away' }
 }
 
 /** Bounding box of landmarks. Face and hand landmarks carry no visibility, so pass useVisibility=false. */

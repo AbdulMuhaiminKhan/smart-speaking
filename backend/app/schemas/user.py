@@ -4,11 +4,25 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
+Language = Literal["en", "de", "ur"]
+
+
+class Goals(BaseModel):
+    """Personal targets shown on the dashboard. None switches a target off."""
+
+    sessions_per_week: int | None = Field(default=3, ge=1, le=21)
+    max_fillers_per_min: float | None = Field(default=3.0, ge=0, le=30)
+    wpm_low: int | None = Field(default=120, ge=60, le=250)
+    wpm_high: int | None = Field(default=160, ge=60, le=250)
+    min_score: int | None = Field(default=None, ge=1, le=100)
+
 
 class UserSettings(BaseModel):
-    language: Literal["en"] = "en"  # more languages can be added with a lexicon file
+    language: Language = "en"  # language you speak in recordings
+    ui_language: Language = "en"  # language of the app and the written coaching
     model_preset: Literal["fast", "balanced", "accurate"] = "balanced"
     auto_delete_video: bool = False
+    goals: Goals = Goals()
 
 
 class UserOut(BaseModel):
