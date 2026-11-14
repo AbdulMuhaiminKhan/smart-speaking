@@ -77,7 +77,7 @@ export function EmotionsCard({ body, voiceEmotion, duration, onSeek }: Props) {
   const hasVoice = voiceEmotion && Object.keys(voiceEmotion.emotions).length > 0
   if (!hasFace && !hasVoice) return null
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
+    <div className="card">
       <h3 className="font-semibold">{t('emo.title')}</h3>
       <p className="mb-4 text-xs text-slate-500">{t('emo.note')}</p>
       <div className="grid gap-5 md:grid-cols-2">

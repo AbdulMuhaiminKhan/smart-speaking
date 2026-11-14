@@ -43,7 +43,7 @@ function Metrics({ rows }: { rows: Row[] }) {
   )
 }
 
-const card = 'rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900'
+const card = 'card'
 
 export function VoiceDeliveryCard({ voice, pacing, onSeek }: { voice: VoiceResult | null; pacing: PacingResult | null; onSeek: (t: number) => void }) {
   const { t } = useI18n()

@@ -10,17 +10,7 @@ import { CATEGORY_ORDER, scoreColor } from '../lib/categories'
 import { errorText } from '../lib/errors'
 import { recentChange } from '../lib/trends'
 
-const card = 'rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900'
-
-function Stat({ label, value, hint }: { label: string; value: string; hint?: string }) {
-  return (
-    <div className={card}>
-      <p className="text-xs uppercase tracking-wide text-slate-500">{label}</p>
-      <p className="mt-1 text-3xl font-semibold tabular-nums">{value}</p>
-      {hint && <p className="text-sm text-slate-500">{hint}</p>}
-    </div>
-  )
-}
+const card = 'card'
 
 type Metric = 'score' | 'fillers' | 'wpm' | 'clarity'
 
@@ -191,14 +181,40 @@ export function DashboardPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold">{user?.name ? t('dash.welcome_name', { name: user.name }) : t('dash.welcome')}</h1>
-          <p className="text-slate-600 dark:text-slate-400">{t('dash.subtitle')}</p>
+          <h1 className="text-3xl font-semibold tracking-tight">{user?.name ? t('dash.welcome_name', { name: user.name }) : t('dash.welcome')}</h1>
+          {progress && progress.count > 0 ? (
+            <p className="mt-1 flex flex-wrap gap-x-5 gap-y-1 text-sm text-slate-600 dark:text-slate-400">
+              <span>
+                {t('dash.sessions')} <strong className="text-slate-900 tabular-nums dark:text-white">{progress.count}</strong>
+              </span>
+              <span>
+                {t('dash.latest')}{' '}
+                <strong className={`tabular-nums ${scoreColor(progress.latest)}`}>
+                  {progress.latest !== null ? Math.round(progress.latest) : '–'}
+                </strong>
+                {change !== null && (
+                  <span dir="ltr" className={`ms-1 inline-block text-xs ${change >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                    {change >= 0 ? '+' : ''}
+                    {change}
+                  </span>
+                )}
+              </span>
+              <span>
+                {t('dash.best')} <strong className="text-slate-900 tabular-nums dark:text-white">{progress.best !== null ? Math.round(progress.best) : '–'}</strong>
+              </span>
+              <span>
+                {t('dash.average')} <strong className="text-slate-900 tabular-nums dark:text-white">{progress.average !== null ? Math.round(progress.average) : '–'}</strong>
+              </span>
+            </p>
+          ) : (
+            <p className="text-slate-600 dark:text-slate-400">{t('dash.subtitle')}</p>
+          )}
         </div>
         <div className="flex gap-2">
-          <Link to="/live" className="rounded-md bg-brand-600 px-4 py-2 font-medium text-white hover:bg-brand-700">
+          <Link to="/live" className="btn-primary">
             {t('dash.practice_live')}
           </Link>
-          <Link to="/upload" className="rounded-md border border-slate-300 px-4 py-2 font-medium dark:border-slate-700">
+          <Link to="/upload" className="btn-quiet">
             {t('dash.upload_video')}
           </Link>
         </div>
@@ -216,24 +232,14 @@ export function DashboardPage() {
 
       {progress && progress.count > 0 && (
         <>
-          <div className="grid gap-4 sm:grid-cols-4">
-            <Stat label={t('dash.sessions')} value={String(progress.count)} />
-            <Stat
-              label={t('dash.latest')}
-              value={progress.latest !== null ? String(Math.round(progress.latest)) : '–'}
-              hint={change !== null ? t('dash.vs_previous', { delta: `${change >= 0 ? '+' : ''}${change}` }) : undefined}
-            />
-            <Stat label={t('dash.best')} value={progress.best !== null ? String(Math.round(progress.best)) : '–'} />
-            <Stat label={t('dash.average')} value={progress.average !== null ? String(Math.round(progress.average)) : '–'} />
-          </div>
-
-          {ach && <GoalsPanel data={ach} />}
+          {ach && <GoalsPanel data={ach} part="goals" />}
 
           <Trends progress={progress} goals={user?.settings.goals} />
 
+          <div className="grid gap-6 xl:grid-cols-[3fr_2fr]">
           <div className={card}>
             <h2 className="mb-3 font-semibold">{t('dash.by_category')}</h2>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
+            <div className="grid grid-cols-2 gap-x-3 gap-y-4 sm:grid-cols-4">
               {CATEGORY_ORDER.map((c) => {
                 const v = latestCats[c] ?? null
                 const delta = progress.category_change[c]
@@ -280,6 +286,9 @@ export function DashboardPage() {
                 ))}
             </ul>
           </div>
+          </div>
+
+          {ach && <GoalsPanel data={ach} part="achievements" />}
         </>
       )}
     </div>

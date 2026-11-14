@@ -17,7 +17,7 @@ interface Props {
   onSeek: (t: number) => void
 }
 
-const card = 'rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900'
+const card = 'card'
 
 function ScoreGrid({ report }: { report: Report }) {
   const { t } = useI18n()

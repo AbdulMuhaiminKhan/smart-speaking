@@ -10,7 +10,7 @@ export function ScriptDriftCard({ language, onSeek }: { language: LanguageResult
   const parts = sc.parts ?? []
   const count = (k: string) => parts.filter((p) => p.kind === k).length
   return (
-    <section className="rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
+    <section className="card">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h3 className="font-semibold">{t('script.report_title')}</h3>
         <p className="text-sm text-slate-500">

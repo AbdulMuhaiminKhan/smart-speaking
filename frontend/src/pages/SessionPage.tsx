@@ -154,7 +154,7 @@ export function SessionPage() {
           {session.status === 'completed' && (
             <a
               href={reportApi.pdfUrl(id, lang)}
-              className="rounded-md bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700"
+              className="btn-primary px-3 py-1.5"
             >
               {t('session.export_pdf')}
             </a>
@@ -170,7 +170,7 @@ export function SessionPage() {
       </div>
 
       {running && (
-        <div className="rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
+        <div className="card">
           <ProgressBar
             value={session.progress}
             indeterminate={session.status === 'queued'}
@@ -207,7 +207,7 @@ export function SessionPage() {
       )}
 
       {(session.prompts.length > 0 || session.target_seconds) && (
-        <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+        <div className="card p-4">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <p className="font-medium">{t(`mode.${session.mode}`)}</p>
             {session.target_seconds && (
@@ -257,6 +257,7 @@ export function SessionPage() {
           {report && (
             <VideoTimeline
               issues={report.issues}
+              wpm={pacing?.wpm_overall ?? null}
               markers={[
                 ...session.prompts.map((p, i) => ({ id: `prompt-${i}`, t: p.t, label: p.text, kind: 'prompt' as const })),
                 ...notes.map((n) => ({ id: n.id, t: n.t, label: n.text, kind: 'note' as const })),
@@ -295,7 +296,7 @@ export function SessionPage() {
             />
           )}
         </div>
-        <section className="rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
+        <section className="card">
           <h2 className="mb-1 font-semibold">{t('session.transcript')}</h2>
           {transcript ? (
             <>

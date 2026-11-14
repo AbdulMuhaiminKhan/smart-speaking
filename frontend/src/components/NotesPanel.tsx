@@ -49,7 +49,7 @@ export function NotesPanel({ sessionId, notes, onChange, currentTime, onSeek, pa
   }
 
   return (
-    <section className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+    <section className="card p-4">
       <div className="flex items-center justify-between gap-2">
         <h2 className="flex items-center gap-2 font-semibold">
           <Icon name="note" size={18} /> {t('notes.title')}
@@ -89,7 +89,7 @@ export function NotesPanel({ sessionId, notes, onChange, currentTime, onSeek, pa
             className="w-full rounded-md border border-slate-300 bg-transparent px-3 py-2 text-sm dark:border-slate-700"
           />
           <div className="flex gap-2">
-            <button className="rounded-md bg-brand-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50" disabled={!draft.text.trim()}>
+            <button className="btn-primary px-3 py-1.5" disabled={!draft.text.trim()}>
               {t('common.save')}
             </button>
             <button type="button" onClick={() => setDraft(null)} className="rounded-md px-3 py-1.5 text-sm text-slate-500">

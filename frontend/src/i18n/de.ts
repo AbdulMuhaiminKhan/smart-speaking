@@ -502,4 +502,6 @@ export const de: Record<MessageKey, string> = {
   'notes.edit': 'Bearbeiten',
   'notes.save_failed': 'Die Notiz konnte nicht gespeichert werden.',
   'notes.speed': 'Tempo',
+  'timeline.legend_heads': 'Gefüllter Kopf: gravierend · offen: leicht · Raute: Frage oder Notiz',
+  'auth.pitch': 'Übe einen Vortrag und lies ihn dann wie eine Partitur: dein Tempo, deine Pausen, deine Füllwörter, jedes genau dort markiert, wo es passiert ist.',
 }

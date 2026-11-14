@@ -135,14 +135,14 @@ export function UploadPage() {
       </div>
 
       {file && (
-        <div className="mt-6 space-y-5 rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
+        <div className="mt-6 space-y-5 card">
           <label className="block">
             <span className="text-sm font-medium">{t('upload.field_title')}</span>
             <input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               maxLength={200}
-              className="mt-1 w-full rounded-md border border-slate-300 bg-transparent px-3 py-2 dark:border-slate-700"
+              className="field"
             />
           </label>
 
@@ -160,7 +160,7 @@ export function UploadPage() {
                   }}
                   className={`rounded-md border px-3 py-1.5 text-sm ${
                     mode === value
-                      ? 'border-brand-600 bg-brand-50 text-brand-700 dark:bg-slate-800 dark:text-white'
+                      ? 'border-brand-600 bg-brand-600 text-white'
                       : 'border-slate-300 dark:border-slate-700'
                   }`}
                 >
@@ -177,7 +177,7 @@ export function UploadPage() {
                     type="button"
                     onClick={() => setTarget(s)}
                     className={`rounded-md border px-3 py-1 text-sm ${
-                      target === s ? 'border-brand-600 text-brand-700 dark:text-white' : 'border-slate-300 dark:border-slate-700'
+                      target === s ? 'border-brand-600 bg-brand-600 text-white' : 'border-slate-300 dark:border-slate-700'
                     }`}
                   >
                     {s < 60 ? t('common.seconds', { n: s }) : t('mode.minutes', { n: s / 60 })}
@@ -201,12 +201,12 @@ export function UploadPage() {
                   onClick={() => setPreset(p)}
                   className={`rounded-md border px-3 py-2 text-start text-sm ${
                     preset === p
-                      ? 'border-brand-600 bg-brand-50 dark:bg-slate-800'
+                      ? 'border-brand-600 bg-brand-600 text-white'
                       : 'border-slate-300 dark:border-slate-700'
                   }`}
                 >
                   <span className="block font-medium">{t(`preset.${p}`)}</span>
-                  <span className="block text-xs text-slate-500">{t(`preset.${p}_hint`)}</span>
+                  <span className="block text-xs opacity-75">{t(`preset.${p}_hint`)}</span>
                 </button>
               ))}
             </div>
@@ -242,7 +242,7 @@ export function UploadPage() {
             <button
               type="button"
               onClick={() => void submit()}
-              className="w-full rounded-md bg-brand-600 px-4 py-2.5 font-medium text-white hover:bg-brand-700"
+              className="w-full btn-primary"
             >
               {t('upload.submit')}
             </button>

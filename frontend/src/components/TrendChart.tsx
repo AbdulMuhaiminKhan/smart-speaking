@@ -18,8 +18,8 @@ interface Props {
   format?: (v: number) => string
 }
 
-const W = 640
-const H = 200
+const W = 960
+const H = 230
 const L = 40
 const R = 16
 const T = 12

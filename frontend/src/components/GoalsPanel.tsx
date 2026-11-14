@@ -5,7 +5,7 @@ import type { Achievement, Achievements, GoalStatus } from '../api/client'
 import { useI18n } from '../i18n'
 import { Icon, type IconName } from './Icon'
 
-const card = 'rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900'
+const card = 'card'
 
 const BADGE_ICON: Record<string, IconName> = {
   first_session: 'mic',
@@ -80,7 +80,7 @@ function Badge({ a }: { a: Achievement }) {
   const { tk, formatDate } = useI18n()
   const body = (
     <div
-      className={`flex h-full flex-col items-center gap-2 rounded-xl border p-3 text-center transition ${
+      className={`flex h-full items-center gap-3 rounded-lg border p-2.5 text-start transition ${
         a.earned
           ? 'border-amber-300 bg-amber-50 dark:border-amber-700/60 dark:bg-amber-950/30'
           : 'border-slate-200 opacity-70 dark:border-slate-800'
@@ -88,32 +88,34 @@ function Badge({ a }: { a: Achievement }) {
       title={tk(`ach.${a.id}_desc`, '')}
     >
       <span
-        className={`grid h-11 w-11 place-items-center rounded-full ${
+        className={`grid h-9 w-9 shrink-0 place-items-center rounded-full ${
           a.earned ? 'bg-amber-400 text-amber-950' : 'bg-slate-100 text-slate-400 dark:bg-slate-800'
         }`}
       >
-        <Icon name={a.earned ? (BADGE_ICON[a.id] ?? 'star') : 'lock'} size={22} />
+        <Icon name={a.earned ? (BADGE_ICON[a.id] ?? 'star') : 'lock'} size={18} />
       </span>
-      <span className="text-sm font-medium leading-tight">{tk(`ach.${a.id}`, a.id)}</span>
-      {a.earned ? (
-        a.earned_at && <span className="text-[11px] text-slate-500">{formatDate(a.earned_at, false)}</span>
-      ) : (
-        <span dir="ltr" className="h-1 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
-          <span className="block h-full bg-brand-500" style={{ width: `${Math.round(a.progress * 100)}%` }} />
-        </span>
-      )}
+      <span className="flex min-w-0 flex-1 flex-col gap-1">
+        <span className="text-sm font-medium leading-tight">{tk(`ach.${a.id}`, a.id)}</span>
+        {a.earned ? (
+          a.earned_at && <span className="text-[11px] text-slate-500">{formatDate(a.earned_at, false)}</span>
+        ) : (
+          <span dir="ltr" className="block h-1 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+            <span className="block h-full bg-brand-500" style={{ width: `${Math.round(a.progress * 100)}%` }} />
+          </span>
+        )}
+      </span>
     </div>
   )
   return a.session_id ? <Link to={`/sessions/${a.session_id}`}>{body}</Link> : body
 }
 
-export function GoalsPanel({ data }: { data: Achievements }) {
+export function GoalsPanel({ data, part }: { data: Achievements; part: 'goals' | 'achievements' }) {
   const { t } = useI18n()
   const weekly = data.goals.find((g) => g.id === 'sessions_per_week')
   const others = data.goals.filter((g) => g.id !== 'sessions_per_week')
   const earned = data.achievements.filter((a) => a.earned).length
+  if (part === 'achievements') return <AchievementsCard data={data} earned={earned} />
   return (
-    <div className="space-y-6">
       <div className="grid gap-4 md:grid-cols-3">
         <div className={card}>
           <div className="flex items-center gap-3">
@@ -134,7 +136,7 @@ export function GoalsPanel({ data }: { data: Achievements }) {
         <div className={`${card} flex items-center gap-4`}>
           <div className="relative">
             <Ring value={data.week_sessions} goal={weekly ? Number(weekly.target) : 0} />
-            <span className="absolute inset-0 grid place-items-center text-lg font-semibold tabular-nums">
+            <span dir="ltr" className="absolute inset-0 grid place-items-center text-lg font-semibold tabular-nums">
               {data.week_sessions}
               {weekly && <span className="text-xs text-slate-400">/{weekly.target}</span>}
             </span>
@@ -175,18 +177,22 @@ export function GoalsPanel({ data }: { data: Achievements }) {
           <p className="mt-2 text-xs text-slate-500">{t('goal.latest_note')}</p>
         </div>
       </div>
+  )
+}
 
+function AchievementsCard({ data, earned }: { data: Achievements; earned: number }) {
+  const { t } = useI18n()
+  return (
       <div className={card}>
         <div className="mb-3 flex items-baseline justify-between">
           <h2 className="font-semibold">{t('ach.title')}</h2>
           <span className="text-sm text-slate-500">{t('ach.count', { n: earned, total: data.achievements.length })}</span>
         </div>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
           {data.achievements.map((a) => (
             <Badge key={a.id} a={a} />
           ))}
         </div>
       </div>
-    </div>
   )
 }

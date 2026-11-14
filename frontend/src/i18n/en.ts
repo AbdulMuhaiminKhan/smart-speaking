@@ -521,6 +521,8 @@ export const en = {
   'notes.edit': 'Edit',
   'notes.save_failed': 'The note could not be saved.',
   'notes.speed': 'Speed',
+  'timeline.legend_heads': 'Filled head: major · open head: minor · diamond: question or note',
+  'auth.pitch': 'Practice a talk, then read it back like a score: your pace, your pauses, your filler words, each one marked where it happened.',
 } as const
 
 export type MessageKey = keyof typeof en

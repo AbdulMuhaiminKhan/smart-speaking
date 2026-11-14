@@ -2,31 +2,78 @@ import { useState, type FormEvent } from 'react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { authApi } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
+import { Icon } from '../components/Icon'
 import { LanguageSwitcher } from '../components/LanguageSwitcher'
+import { Mark } from '../components/Layout'
 import { useI18n } from '../i18n'
 import { errorText } from '../lib/errors'
 
-const input = 'mt-1 w-full rounded-md border border-slate-300 bg-transparent px-3 py-2 dark:border-slate-700'
+const input = 'field'
 
 function Shell({ title, children, footer }: { title: string; children: React.ReactNode; footer: React.ReactNode }) {
   const { t } = useI18n()
   return (
-    <div className="mx-auto mt-10 max-w-sm px-4">
-      <div className="mb-6 flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2 text-lg font-semibold">
-          <span className="grid h-9 w-9 place-items-center rounded-lg bg-brand-600 text-white">S</span>
+    <div className="grid min-h-screen lg:grid-cols-[1.1fr_1fr]">
+      <section className="relative hidden overflow-hidden bg-score-900 p-12 text-white lg:flex lg:flex-col lg:justify-between">
+        <div className="flex items-center gap-3 text-lg font-semibold">
+          <Mark className="h-10 w-10" />
           {t('app.name')}
         </div>
-        <LanguageSwitcher />
-      </div>
-      <div className="rounded-xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
-        <h1 className="mb-4 text-xl font-semibold">{title}</h1>
-        {children}
-      </div>
-      <p className="mt-4 text-center text-sm text-slate-500">{footer}</p>
-      <p className="mt-6 text-center text-xs text-slate-400">
-        {t('auth.tagline')}
-      </p>
+        <div className="max-w-md">
+          <p className="tempo text-3xl text-score-100">Moderato</p>
+          <p className="mt-3 text-2xl font-semibold leading-snug tracking-tight">{t('auth.pitch')}</p>
+          {/* A stave with a few marks, the product's own notation. */}
+          <svg viewBox="0 0 400 70" className="mt-8 w-full" aria-hidden="true">
+            {[10, 22, 34, 46, 58].map((y) => (
+              <line key={y} x1="0" x2="400" y1={y} y2={y} stroke="white" strokeOpacity="0.25" />
+            ))}
+            {[100, 200, 300].map((x) => (
+              <line key={x} x1={x} x2={x} y1="10" y2="58" stroke="white" strokeOpacity="0.25" />
+            ))}
+            {[
+              [40, 46, true],
+              [70, 34, true],
+              [130, 28, false],
+              [165, 40, true],
+              [240, 22, true],
+              [270, 52, false],
+              [330, 34, true],
+              [365, 28, true],
+            ].map(([x, y, filled], i) => (
+              <ellipse
+                key={i}
+                cx={x as number}
+                cy={y as number}
+                rx="7"
+                ry="5"
+                transform={`rotate(-22 ${x} ${y})`}
+                fill={filled ? 'oklch(0.86 0.11 85)' : 'none'}
+                stroke="oklch(0.86 0.11 85)"
+                strokeWidth="2"
+              />
+            ))}
+          </svg>
+        </div>
+        <p className="flex max-w-md gap-2 text-sm text-score-200">
+          <Icon name="lock" size={18} className="mt-0.5 shrink-0" />
+          {t('auth.tagline')}
+        </p>
+      </section>
+      <section className="flex flex-col justify-center px-4 py-10 sm:px-10">
+        <div className="mx-auto w-full max-w-sm">
+          <div className="mb-8 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 text-lg font-semibold lg:invisible">
+              <Mark />
+              {t('app.name')}
+            </div>
+            <LanguageSwitcher />
+          </div>
+          <h1 className="mb-6 text-2xl font-semibold tracking-tight">{title}</h1>
+          {children}
+          <p className="mt-6 text-sm text-slate-500">{footer}</p>
+          <p className="mt-10 text-xs text-slate-400 lg:hidden">{t('auth.tagline')}</p>
+        </div>
+      </section>
     </div>
   )
 }
@@ -70,7 +117,7 @@ export function LoginPage() {
           <input type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} className={input} />
         </label>
         {error && <p role="alert" className="text-sm text-red-700 dark:text-red-300">{error}</p>}
-        <button disabled={busy} className="w-full rounded-md bg-brand-600 px-4 py-2.5 font-medium text-white hover:bg-brand-700 disabled:opacity-60">
+        <button disabled={busy} className="w-full btn-primary">
           {busy ? t('auth.signing_in') : t('auth.sign_in')}
         </button>
       </form>
@@ -131,7 +178,7 @@ export function RegisterPage() {
           <span className="mt-1 block text-xs font-normal text-slate-500">{t('auth.password_hint')}</span>
         </label>
         {error && <p role="alert" className="text-sm text-red-700 dark:text-red-300">{error}</p>}
-        <button disabled={busy} className="w-full rounded-md bg-brand-600 px-4 py-2.5 font-medium text-white hover:bg-brand-700 disabled:opacity-60">
+        <button disabled={busy} className="w-full btn-primary">
           {busy ? t('auth.creating') : t('auth.create')}
         </button>
       </form>

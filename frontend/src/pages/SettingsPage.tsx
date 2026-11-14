@@ -15,8 +15,8 @@ import { useI18n } from '../i18n'
 import { LANGS } from '../i18n/core'
 import { errorText } from '../lib/errors'
 
-const card = 'rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900'
-const input = 'mt-1 w-full rounded-md border border-slate-300 bg-transparent px-3 py-2 dark:border-slate-700'
+const card = 'card'
+const input = 'field'
 
 export function SettingsPage() {
   const { user, setUser } = useAuth()
@@ -123,10 +123,10 @@ export function SettingsPage() {
                 key={value}
                 type="button"
                 onClick={() => void save({ ...settings, model_preset: value })}
-                className={`rounded-md border px-3 py-2 text-start text-sm ${settings.model_preset === value ? 'border-brand-600 bg-brand-50 dark:bg-slate-800' : 'border-slate-300 dark:border-slate-700'}`}
+                className={`rounded-md border px-3 py-2 text-start text-sm ${settings.model_preset === value ? 'border-brand-600 bg-brand-600 text-white' : 'border-slate-300 dark:border-slate-700'}`}
               >
                 <span className="block font-medium">{t(`preset.${value}`)}</span>
-                <span className="block text-xs text-slate-500">{hint}</span>
+                <span className="block text-xs opacity-75">{hint}</span>
               </button>
             ))}
           </div>
@@ -159,7 +159,7 @@ export function SettingsPage() {
             </label>
           ))}
           <div className="flex items-end">
-            <button className="rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700">{t('goal.save')}</button>
+            <button className="btn-primary">{t('goal.save')}</button>
           </div>
         </form>
       </section>

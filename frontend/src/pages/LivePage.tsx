@@ -466,7 +466,7 @@ export function LivePage() {
             {phase === 'prep' && (
               <div className="absolute inset-0 grid place-items-center bg-slate-950/70 p-6 text-center text-white">
                 <div>
-                  <p className="text-sm uppercase tracking-widest text-slate-300">{t('modes.prep')}</p>
+                  <p className="tempo text-2xl text-score-100">{t('modes.prep')}</p>
                   <p className="mt-2 text-6xl font-semibold tabular-nums">{prepLeft}</p>
                   <p dir="auto" className="mx-auto mt-4 max-w-lg text-xl">{prompt}</p>
                   <button
@@ -500,13 +500,13 @@ export function LivePage() {
           </div>
 
         {phase === 'idle' && (
-          <div className="flex flex-wrap items-end gap-4 rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+          <div className="flex flex-wrap items-end gap-4 card p-4">
             <label className="min-w-56 flex-1">
               <span className="text-sm font-medium">{t('live.title_optional')}</span>
               <input
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                className="mt-1 w-full rounded-md border border-slate-300 bg-transparent px-3 py-2 dark:border-slate-700"
+                className="field"
               />
             </label>
             <div className="w-full">
@@ -519,7 +519,7 @@ export function LivePage() {
                     onClick={() => chooseMode(m)}
                     title={t(`modes.${m}_hint`)}
                     className={`rounded-md border px-3 py-2 text-sm ${
-                      mode === m ? 'border-brand-600 bg-brand-50 dark:bg-slate-800' : 'border-slate-300 dark:border-slate-700'
+                      mode === m ? 'border-brand-600 bg-brand-600 text-white' : 'border-slate-300 dark:border-slate-700'
                     }`}
                   >
                     {t(`mode.${m}`)}
@@ -538,7 +538,7 @@ export function LivePage() {
                       type="button"
                       onClick={() => setTarget(sec)}
                       className={`rounded-md border px-3 py-2 text-sm ${
-                        target === sec ? 'border-brand-600 bg-brand-50 dark:bg-slate-800' : 'border-slate-300 dark:border-slate-700'
+                        target === sec ? 'border-brand-600 bg-brand-600 text-white' : 'border-slate-300 dark:border-slate-700'
                       }`}
                     >
                       {sec < 60 ? t('common.seconds', { n: sec }) : t('mode.minutes', { n: sec / 60 })}
@@ -569,7 +569,7 @@ export function LivePage() {
               type="button"
               onClick={() => void start()}
               disabled={mode === 'script' && !script.trim()}
-              className="rounded-md bg-brand-600 px-5 py-2.5 font-medium text-white hover:bg-brand-700 disabled:opacity-50"
+              className="btn-primary"
             >
               {t('live.start')}
             </button>
@@ -637,13 +637,13 @@ export function LivePage() {
         {phase === 'uploading' && <ProgressBar value={uploadProgress} label={t('live.saving')} />}
         </div>
         <aside className="space-y-4">
-          <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
-            <p className="text-xs uppercase tracking-wide text-slate-500">{t('live.pace')}</p>
+          <div className="card p-4">
+            <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">{t('live.pace')}</p>
             <PaceGauge wpm={wpm} />
             <p className={`mt-1 text-center text-sm ${wpmTone(wpm)}`}>{t(wpmHint(wpm))}</p>
           </div>
-          <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
-            <p className="text-xs uppercase tracking-wide text-slate-500">{t('live.voice_level')}</p>
+          <div className="card p-4">
+            <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">{t('live.voice_level')}</p>
             <div dir="ltr" className="mt-2 h-2.5 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
               <div
                 className={`h-full rounded-full transition-[width] duration-100 ${level > 0.85 ? 'bg-amber-500' : level < 0.35 ? 'bg-sky-400' : 'bg-emerald-500'}`}
@@ -666,7 +666,7 @@ export function LivePage() {
             key={alert?.id}
             className={`rounded-xl border bg-white p-4 dark:bg-slate-900 ${alert && Date.now() - alert.id < 2500 ? 'animate-[ss-flash_1.2s_ease-out] border-amber-400' : 'border-slate-200 dark:border-slate-800'}`}
           >
-            <p className="text-xs uppercase tracking-wide text-slate-500">{t('live.fillers')}</p>
+            <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">{t('live.fillers')}</p>
             <p className={`text-4xl font-semibold tabular-nums ${(stats?.fillers ?? 0) > 5 ? 'text-amber-500' : ''}`}>
               {stats?.fillers ?? 0}
             </p>
@@ -678,8 +678,8 @@ export function LivePage() {
                 : t('common.none_yet')}
             </p>
           </div>
-          <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
-            <p className="text-xs uppercase tracking-wide text-slate-500">{t('live.eye_contact')}</p>
+          <div className="card p-4">
+            <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">{t('live.eye_contact')}</p>
             <p className={`text-4xl font-semibold tabular-nums ${eyeRecent === null ? 'text-slate-400' : eyeRecent >= 0.75 ? 'text-emerald-500' : 'text-amber-500'}`}>
               {eyeRecent === null ? '–' : `${Math.round(eyeRecent * 100)}%`}
             </p>
@@ -687,8 +687,8 @@ export function LivePage() {
               {calibrating ? t('live.calibrating') : checks?.face ? t(checks.face.labelKey) : phase === 'recording' ? t('live.no_face') : t('live.last_10s')}
             </p>
           </div>
-          <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
-            <p className="text-xs uppercase tracking-wide text-slate-500">{t('live.posture')}</p>
+          <div className="card p-4">
+            <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">{t('live.posture')}</p>
             <p className={`text-lg font-semibold ${!checks?.posture ? 'text-slate-400' : checks.posture.ok ? 'text-emerald-500' : 'text-red-500'}`}>
               {checks?.posture ? t(checks.posture.labelKey) : phase === 'recording' ? t('live.no_shoulders') : '–'}
             </p>
@@ -696,8 +696,8 @@ export function LivePage() {
               {checks ? t('live.hands_visible', { n: checks.handsVisible }) : ''}
             </p>
           </div>
-          <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
-            <p className="text-xs uppercase tracking-wide text-slate-500">{t('live.expression')}</p>
+          <div className="card p-4">
+            <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">{t('live.expression')}</p>
             <p className="text-lg font-semibold">{checks?.face ? t(`emotion.${checks.face.emotion}`) : '–'}</p>
             <p className="text-sm text-slate-500">
               {emotionMix.length
@@ -714,7 +714,7 @@ export function LivePage() {
             {t('live.beep')}
           </label>
           <div className="rounded-xl border border-slate-200 bg-white p-4 text-sm dark:border-slate-800 dark:bg-slate-900">
-            <p className="text-xs uppercase tracking-wide text-slate-500">{t('live.last_heard')}</p>
+            <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">{t('live.last_heard')}</p>
             <p dir="auto" className="mt-1 min-h-10 text-slate-700 dark:text-slate-300">{stats?.last_text || '…'}</p>
           </div>
         </aside>
