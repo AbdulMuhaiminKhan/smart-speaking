@@ -189,14 +189,17 @@ export function DashboardPage() {
               </span>
               <span>
                 {t('dash.latest')}{' '}
-                <strong className={`tabular-nums ${scoreColor(progress.latest)}`}>
+                <bdi className={`font-bold tabular-nums ${scoreColor(progress.latest)}`}>
                   {progress.latest !== null ? Math.round(progress.latest) : '–'}
-                </strong>
+                </bdi>
                 {change !== null && (
-                  <span dir="ltr" className={`ms-1 inline-block text-xs ${change >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                    {change >= 0 ? '+' : ''}
-                    {change}
-                  </span>
+                  <>
+                    {' '}
+                    <bdi dir="ltr" className={`text-xs ${change >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                      ({change >= 0 ? '+' : ''}
+                      {change})
+                    </bdi>
+                  </>
                 )}
               </span>
               <span>
