@@ -294,11 +294,27 @@ export interface VoiceEmotionResult {
   timeline: EmotionPoint[]
 }
 
+export interface ScriptPart {
+  kind: 'said' | 'skipped' | 'added' | 'changed'
+  script: string
+  spoken: string
+  start: number
+  end: number
+}
+
+export interface LanguageResult {
+  word_count: number
+  fillers_per_min: number
+  filler_counts: Record<string, number>
+  script: { coverage: number; extra_ratio: number; skipped: string[]; added: string[]; parts?: ScriptPart[] } | null
+}
+
 const optional = <T,>(p: Promise<T>): Promise<T | null> => p.catch(() => null)
 
 export const reportApi = {
   getReport: (id: string) => request<Report>(`/api/sessions/${id}/results/report`),
   getPacing: (id: string) => request<PacingResult>(`/api/sessions/${id}/results/pacing`),
+  getLanguage: (id: string) => optional(request<LanguageResult>(`/api/sessions/${id}/results/language`)),
   getVoice: (id: string) => optional(request<VoiceResult>(`/api/sessions/${id}/results/voice`)),
   getBody: (id: string) => optional(request<BodyResult>(`/api/sessions/${id}/results/body`)),
   getVoiceEmotion: (id: string) => optional(request<VoiceEmotionResult>(`/api/sessions/${id}/results/voice_emotion`)),

@@ -4,6 +4,7 @@ import {
   api,
   reportApi,
   type BodyResult,
+  type LanguageResult,
   type PacingResult,
   type PracticeSession,
   type Report,
@@ -14,6 +15,7 @@ import {
 import { ProgressBar } from '../components/ProgressBar'
 import { StatusBadge } from '../components/StatusBadge'
 import { ReportView } from '../components/ReportView'
+import { ScriptDriftCard } from '../components/ScriptDriftCard'
 import { VideoTimeline } from '../components/VideoTimeline'
 import { TranscriptLegend, TranscriptView } from '../components/TranscriptView'
 import { useI18n } from '../i18n'
@@ -32,6 +34,7 @@ export function SessionPage() {
   const [pacing, setPacing] = useState<PacingResult | null>(null)
   const [voice, setVoice] = useState<VoiceResult | null>(null)
   const [body, setBody] = useState<BodyResult | null>(null)
+  const [languageRes, setLanguageRes] = useState<LanguageResult | null>(null)
   const [voiceEmotion, setVoiceEmotion] = useState<VoiceEmotionResult | null>(null)
   const [duration, setDuration] = useState(0)
   const [error, setError] = useState<string | null>(null)
@@ -76,6 +79,7 @@ export function SessionPage() {
       reportApi.getPacing(id).then(setPacing).catch(() => setPacing(null))
       void reportApi.getVoice(id).then(setVoice)
       void reportApi.getBody(id).then(setBody)
+      void reportApi.getLanguage(id).then(setLanguageRes)
       void reportApi.getVoiceEmotion(id).then(setVoiceEmotion)
     }
   }, [session?.status, id, transcript])
@@ -278,6 +282,8 @@ export function SessionPage() {
           )}
         </section>
       </div>
+
+      <ScriptDriftCard language={languageRes} onSeek={seek} />
 
       {report && (
         <ReportView

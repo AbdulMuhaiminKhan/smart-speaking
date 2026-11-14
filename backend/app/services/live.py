@@ -24,6 +24,7 @@ SPLIT_SEARCH_S = 1.5  # look for a quiet point in the last part of the chunk
 FRAME_S = 0.1
 SILENCE_RMS = 0.01  # quieter frames (float scale) count as silence
 RECENT_WINDOW_S = 30.0
+RECENT_WORDS = 40
 
 # (samples float32, offset seconds) -> words with absolute times
 TranscribeFn = Callable[[npt.NDArray[np.float32], float], list[Word]]
@@ -39,6 +40,7 @@ class LiveStats:
     filler_counts: dict[str, int]
     last_text: str
     speaking: bool
+    recent_words: list[str]  # the last words heard, for following along a script
 
     def as_dict(self) -> dict[str, object]:
         return {"type": "stats", **self.__dict__}
@@ -122,6 +124,7 @@ class LiveTranscriber:
             fillers=len(fillers),
             filler_counts=counts,
             last_text=self._last_text,
+            recent_words=[w.text for w in words[-RECENT_WORDS:]],
             speaking=speaking,
         )
 

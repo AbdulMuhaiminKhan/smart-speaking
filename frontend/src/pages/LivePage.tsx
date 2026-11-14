@@ -9,6 +9,9 @@ import { drawFrame, type FrameChecks } from '../live/overlay'
 import { BodyTracker } from '../live/tracker'
 import { meterLevel, newFillers, PAUSE_WARN_S, PauseTracker } from '../live/feedback'
 import { PaceGauge } from '../components/PaceGauge'
+import { ScriptEditor } from '../components/ScriptEditor'
+import { Teleprompter } from '../components/Teleprompter'
+import { followPosition, SKIP_WORDS, skippedRanges, tokenize } from '../live/scriptFollow'
 import { extensionFor, Recording } from '../live/recorder'
 import { useI18n } from '../i18n'
 import { LANGS, type MessageKey } from '../i18n/core'
@@ -19,7 +22,7 @@ import { isPromptMode, lightAt, MODE_TARGETS, PREP_SECONDS, randomPrompt, timing
 
 type Phase = 'idle' | 'starting' | 'prep' | 'recording' | 'uploading'
 
-const LIVE_MODES: SessionMode[] = ['free_talk', 'timed_pitch', 'impromptu', 'elevator_pitch', 'interview', 'table_topics']
+const LIVE_MODES: SessionMode[] = ['free_talk', 'timed_pitch', 'script', 'impromptu', 'elevator_pitch', 'interview', 'table_topics']
 // Modes that stop by themselves at the target; the others run a little over, as in real life.
 const HARD_STOP: SessionMode[] = ['timed_pitch', 'elevator_pitch']
 const OVERRUN_S = 30
@@ -86,6 +89,19 @@ export function LivePage() {
   const [trackerNote, setTrackerNote] = useState<string | null>(null)
   const [phase, setPhase] = useState<Phase>('idle')
   const [stats, setStats] = useState<LiveStats | null>(null)
+  // Script rehearsal: the script, where the speaker is in it, and passages they skipped.
+  const [script, setScript] = useState('')
+  const scriptKeys = useRef<string[]>([])
+  const [scriptPos, setScriptPos] = useState(0)
+  const posRef = useRef(0)
+  const wordsSeen = useRef(0)
+  const [skipped, setSkipped] = useState<[number, number][]>([])
+  const [follow, setFollow] = useState<'voice' | 'steady'>('voice')
+  const followRef = useRef(follow)
+  followRef.current = follow
+  const [steadyWpm, setSteadyWpm] = useState(130)
+  const [mirror, setMirror] = useState(false)
+  const [fontSize, setFontSize] = useState(28)
   const lastCounts = useRef<Record<string, number>>({})
   const [alert, setAlert] = useState<{ phrase: string; id: number } | null>(null)
   const [beep, setBeep] = useState(false)
@@ -224,6 +240,16 @@ export function LivePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [elapsed, phase, target, mode])
 
+  // Steady teleprompter: move through the script at the chosen pace.
+  useEffect(() => {
+    if (phase !== 'recording' || mode !== 'script' || follow !== 'steady') return
+    const id = window.setInterval(() => {
+      posRef.current = Math.min(scriptKeys.current.length, posRef.current + steadyWpm / 60 / 4)
+      setScriptPos(Math.floor(posRef.current))
+    }, 250)
+    return () => window.clearInterval(id)
+  }, [phase, mode, follow, steadyWpm])
+
   // A new spoken language gets a prompt in that language.
   useEffect(() => {
     if (isPromptMode(mode) && phase === 'idle') setPrompt(randomPrompt(mode, speechLang))
@@ -271,6 +297,11 @@ export function LivePage() {
     setNotice(null)
     setStats(null)
     lastCounts.current = {}
+    scriptKeys.current = tokenize(script).map((w) => w.key)
+    posRef.current = 0
+    wordsSeen.current = 0
+    setScriptPos(0)
+    setSkipped([])
     pauseTracker.current = new PauseTracker()
     setAlert(null)
     setSilence(0)
@@ -305,6 +336,20 @@ export function LivePage() {
             if (beepRef.current) softBeep(audioCtx)
           }
           setStats(s)
+          if (mode === 'script' && followRef.current === 'voice' && s.recent_words?.length) {
+            const said = Math.max(0, s.words - wordsSeen.current)
+            wordsSeen.current = s.words
+            const from = posRef.current
+            const to = followPosition(scriptKeys.current, s.recent_words, from)
+            if (to - from > said + SKIP_WORDS) {
+              const ranges = skippedRanges(scriptKeys.current, from, to, s.recent_words.slice(-Math.max(said, 1)))
+              if (ranges.length) setSkipped((xs) => [...xs, ...ranges])
+            }
+            if (to !== from) {
+              posRef.current = to
+              setScriptPos(to)
+            }
+          }
         },
         onLevel: (rms, at) => {
           peak.current = Math.max(peak.current, rms)
@@ -371,6 +416,7 @@ export function LivePage() {
         mode,
         targetSeconds: target ?? undefined,
         prompts: promptsRef.current,
+        scriptText: mode === 'script' ? script : undefined,
         language: speechLang,
         onProgress: setUploadProgress,
       })
@@ -501,6 +547,7 @@ export function LivePage() {
                 </div>
               </div>
             )}
+            {mode === 'script' && <ScriptEditor value={script} onChange={setScript} />}
             {isPromptMode(mode) && (
               <PromptPicker mode={mode} lang={speechLang} value={prompt} onChange={setPrompt} className="w-full" />
             )}
@@ -521,13 +568,51 @@ export function LivePage() {
             <button
               type="button"
               onClick={() => void start()}
-              className="rounded-md bg-brand-600 px-5 py-2.5 font-medium text-white hover:bg-brand-700"
+              disabled={mode === 'script' && !script.trim()}
+              className="rounded-md bg-brand-600 px-5 py-2.5 font-medium text-white hover:bg-brand-700 disabled:opacity-50"
             >
               {t('live.start')}
             </button>
           </div>
         )}
         {phase === 'starting' && <p className="text-slate-500">{t('live.starting')}</p>}
+        {(phase === 'recording' || phase === 'prep') && mode === 'script' && (
+          <div className="space-y-2">
+            <Teleprompter script={script} position={Math.floor(scriptPos)} skipped={skipped} mirror={mirror} fontSize={fontSize} />
+            <div className="flex flex-wrap items-center gap-3 text-sm text-slate-600 dark:text-slate-400">
+              <div className="flex rounded-md border border-slate-300 dark:border-slate-700">
+                {(['voice', 'steady'] as const).map((f) => (
+                  <button
+                    key={f}
+                    type="button"
+                    onClick={() => setFollow(f)}
+                    className={`px-3 py-1 ${follow === f ? 'bg-brand-600 text-white' : ''}`}
+                  >
+                    {t(`script.follow_${f}`)}
+                  </button>
+                ))}
+              </div>
+              {follow === 'steady' && (
+                <label className="flex items-center gap-2">
+                  {t('common.wpm')}
+                  <input type="range" min={90} max={190} step={5} value={steadyWpm} onChange={(e) => setSteadyWpm(Number(e.target.value))} />
+                  <span className="tabular-nums">{steadyWpm}</span>
+                </label>
+              )}
+              <label className="flex items-center gap-2">
+                {t('script.text_size')}
+                <input type="range" min={18} max={48} value={fontSize} onChange={(e) => setFontSize(Number(e.target.value))} />
+              </label>
+              <label className="flex items-center gap-2">
+                <input type="checkbox" checked={mirror} onChange={(e) => setMirror(e.target.checked)} />
+                {t('script.mirror')}
+              </label>
+              {skipped.length > 0 && (
+                <span className="font-medium text-red-600">{t('script.skipped_live', { n: skipped.length })}</span>
+              )}
+            </div>
+          </div>
+        )}
         {phase === 'recording' && mode === 'interview' && (
           <div className="flex flex-wrap items-center gap-3">
             <button

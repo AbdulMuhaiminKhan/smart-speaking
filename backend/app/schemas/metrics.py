@@ -94,11 +94,22 @@ class Occurrence(BaseModel):
     word_index: int
 
 
+class ScriptPart(BaseModel):
+    """One stretch of the script aligned with the speech, in script order."""
+
+    kind: Literal["said", "skipped", "added", "changed"]
+    script: str  # the script words (empty for "added")
+    spoken: str  # the spoken words (empty for "skipped")
+    start: float  # when it happened; for skipped text, where in the talk it was left out
+    end: float
+
+
 class ScriptComparison(BaseModel):
     coverage: float  # share of script words that were said, in order
     extra_ratio: float  # share of spoken words not in the script
     skipped: list[str]  # script passages that were left out
     added: list[str]  # spoken passages that were not in the script
+    parts: list[ScriptPart] = []  # the whole script, aligned, for the drift view
 
 
 class LanguageMetrics(BaseModel):

@@ -16,7 +16,7 @@ from typing import Any
 
 import yaml
 
-from app.schemas.metrics import LanguageMetrics, Occurrence, ScriptComparison
+from app.schemas.metrics import LanguageMetrics, Occurrence, ScriptComparison, ScriptPart
 from app.schemas.transcript import Transcript, Word
 
 LEXICON_DIR = Path(__file__).parent / "lexicons"
@@ -215,24 +215,58 @@ def split_sentences(words: list[Word]) -> list[tuple[int, int]]:
     return out
 
 
-def compare_script(script: str, spoken: list[str]) -> ScriptComparison:
-    expected = [t for t in (normalize(x) for x in script.split()) if t]
+def compare_script(
+    script: str,
+    spoken: list[str],
+    *,
+    spoken_display: list[str] | None = None,
+    times: list[tuple[float, float]] | None = None,
+) -> ScriptComparison:
+    """Align the script with what was said. `spoken` holds normalized words; the
+    optional display words and (start, end) times let the app show where you drifted."""
+    raw = [x for x in script.split() if normalize(x)]
+    expected = [normalize(x) for x in raw]
     if not expected:
         return ScriptComparison(coverage=0.0, extra_ratio=0.0, skipped=[], added=[])
+    shown = spoken_display or spoken
     matcher = difflib.SequenceMatcher(None, expected, spoken, autojunk=False)
     matched = sum(b.size for b in matcher.get_matching_blocks())
     skipped: list[str] = []
     added: list[str] = []
+    parts: list[ScriptPart] = []
+
+    def when(j1: int, j2: int) -> tuple[float, float]:
+        if not times:
+            return 0.0, 0.0
+        if j2 > j1:
+            return times[j1][0], times[j2 - 1][1]
+        # Nothing spoken here: place it at the next spoken word (or the last one).
+        k = min(j1, len(times) - 1)
+        t = times[k][0] if j1 < len(times) else times[-1][1]
+        return t, t
+
     for tag, i1, i2, j1, j2 in matcher.get_opcodes():
         if tag in {"delete", "replace"} and i2 - i1 >= SCRIPT_GAP_MIN_WORDS:
             skipped.append(" ".join(expected[i1:i2][:15]))
         if tag in {"insert", "replace"} and j2 - j1 >= SCRIPT_GAP_MIN_WORDS:
             added.append(" ".join(spoken[j1:j2][:15]))
+        start, end = when(j1, j2)
+        kind = {"equal": "said", "delete": "skipped", "insert": "added", "replace": "changed"}[tag]
+        parts.append(
+            ScriptPart(
+                kind=kind,
+                script=" ".join(raw[i1:i2]),
+                spoken=" ".join(shown[j1:j2]),
+                start=round(start, 3),
+                end=round(end, 3),
+            )
+        )
     return ScriptComparison(
         coverage=round(matched / len(expected), 3),
         extra_ratio=round(1 - matched / len(spoken), 3) if spoken else 0.0,
         skipped=skipped,
         added=added,
+        parts=parts,
     )
 
 
@@ -253,7 +287,8 @@ def run(
     hedges = [_occ(words, s, n, norm) for s, n in _match_phrases(norm, lex.hedges, set(filler_idx))]
     repetitions = find_repetitions(words, norm, filler_idx)
 
-    content = [t for i, t in enumerate(norm) if t and i not in filler_idx]
+    content_idx = [i for i, t in enumerate(norm) if t and i not in filler_idx]
+    content = [norm[i] for i in content_idx]
     counts = Counter(t for t in content if t not in lex.stopwords and len(t) > 2)
     threshold = max(OVERUSE_MIN_COUNT, OVERUSE_MIN_SHARE * len(content))
     overused = {w: c for w, c in counts.most_common(10) if c >= threshold}
@@ -286,5 +321,14 @@ def run(
         sentence_count=len(sentences),
         avg_sentence_words=round(sum(lengths) / len(lengths), 1) if lengths else 0.0,
         long_sentences=long_sentences,
-        script=compare_script(script_text, content) if script_text else None,
+        script=(
+            compare_script(
+                script_text,
+                content,
+                spoken_display=[words[i].text.strip() for i in content_idx],
+                times=[(words[i].start, words[i].end) for i in content_idx],
+            )
+            if script_text
+            else None
+        ),
     )

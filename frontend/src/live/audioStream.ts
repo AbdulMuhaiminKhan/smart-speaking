@@ -10,6 +10,7 @@ export interface LiveStats {
   filler_counts: Record<string, number>
   last_text: string
   speaking: boolean
+  recent_words?: string[]
 }
 
 type Message = LiveStats | { type: 'ready' } | { type: 'done' } | { type: 'error'; message: string }

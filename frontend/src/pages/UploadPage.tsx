@@ -4,6 +4,7 @@ import { uploadSession, type Lang, type ModelPreset, type SessionMode } from '..
 import { useAuth } from '../auth/AuthContext'
 import { ProgressBar } from '../components/ProgressBar'
 import { PromptPicker } from '../components/PromptPicker'
+import { ScriptEditor } from '../components/ScriptEditor'
 import { useI18n } from '../i18n'
 import { LANGS, type MessageKey } from '../i18n/core'
 import { errorText } from '../lib/errors'
@@ -187,16 +188,7 @@ export function UploadPage() {
             {isPromptMode(mode) && (
               <PromptPicker mode={mode} lang={speechLang} value={prompt} onChange={setPrompt} className="mt-3" />
             )}
-            {mode === 'script' && (
-              <textarea
-                value={script}
-                onChange={(e) => setScript(e.target.value)}
-                rows={6}
-                placeholder={t('upload.script_placeholder')}
-                dir="auto"
-                className="mt-3 w-full rounded-md border border-slate-300 bg-transparent px-3 py-2 text-sm dark:border-slate-700"
-              />
-            )}
+            {mode === 'script' && <ScriptEditor value={script} onChange={setScript} />}
           </fieldset>
 
           <fieldset>
