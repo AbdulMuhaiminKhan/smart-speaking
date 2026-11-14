@@ -79,3 +79,14 @@ def test_tone_rushed_and_nervous() -> None:
         pitch_std_st=3.5, intensity_std_db=5, pacing=p, fillers_per_min=9
     )
     assert label == "nervous"
+
+
+def test_variation_series_flags_flat_stretches() -> None:
+    from app.pipeline.voice import variation_series
+    from app.schemas.metrics import TimePoint
+
+    flat = [TimePoint(t=i, value=120.0) for i in range(6)]
+    lively = [TimePoint(t=6 + i, value=v) for i, v in enumerate([100, 150, 90, 160, 110, 140])]
+    out = variation_series([*flat, TimePoint(t=5.5, value=None), *lively], 120.0)
+    assert out[2].value == 0.0
+    assert out[-3].value is not None and out[-3].value > 2.0

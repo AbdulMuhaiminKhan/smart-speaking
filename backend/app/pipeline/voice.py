@@ -80,6 +80,26 @@ def per_second(
     return points
 
 
+VARIATION_WINDOW_S = 5  # pitch spread is measured over this many seconds
+
+
+def variation_series(pitch_series: list[TimePoint], reference_hz: float) -> list[TimePoint]:
+    """Pitch spread (semitone standard deviation) in a sliding 5 s window, one point per
+    second. Low stretches sound monotone; None where there is too little voiced speech."""
+    half = VARIATION_WINDOW_S // 2
+    st = [
+        None if p.value is None else 12.0 * float(np.log2(p.value / reference_hz))
+        for p in pitch_series
+    ]
+    out: list[TimePoint] = []
+    for i, p in enumerate(pitch_series):
+        vals = [v for v in st[max(0, i - half) : i + half + 1] if v is not None]
+        out.append(
+            TimePoint(t=p.t, value=round(float(np.std(vals)), 2) if len(vals) >= 3 else None)
+        )
+    return out
+
+
 def _clamp(x: float) -> float:
     return max(0.0, min(1.0, x))
 
@@ -206,6 +226,9 @@ def analyze(
         pitch_range_semitones=r(pitch_range),
         monotone=pitch_std is not None and pitch_std < MONOTONE_STD_ST,
         pitch_series=pitch_series,
+        pitch_variation_series=(
+            variation_series(pitch_series, pitch_median) if pitch_median else []
+        ),
         intensity_mean_db=r(intensity_mean, 1),
         intensity_std_db=r(intensity_std),
         volume_series=volume_series,

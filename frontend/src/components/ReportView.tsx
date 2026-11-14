@@ -1,4 +1,5 @@
 import type { BodyResult, Issue, PacingResult, Report, VoiceEmotionResult, VoiceResult } from '../api/client'
+import { BodyLanguageCard, VoiceDeliveryCard } from './DeliveryCards'
 import { EmotionsCard } from './EmotionsCard'
 import { LineChart, Radar } from './charts'
 import { useI18n } from '../i18n'
@@ -153,6 +154,10 @@ export function ReportView({ report, pacing, voice, body, voiceEmotion, duration
         </div>
       )}
 
+      <div className="grid gap-6 lg:grid-cols-2">
+        <VoiceDeliveryCard voice={voice} pacing={pacing} onSeek={onSeek} />
+        <BodyLanguageCard body={body} />
+      </div>
       <Charts pacing={pacing} voice={voice} body={body} onSeek={onSeek} />
       <EmotionsCard body={body} voiceEmotion={voiceEmotion} duration={duration} onSeek={onSeek} />
       <Timeline issues={report.issues} onSeek={onSeek} />

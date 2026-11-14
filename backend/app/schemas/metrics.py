@@ -73,6 +73,7 @@ class VoiceMetrics(BaseModel):
     pitch_range_semitones: float | None  # 5th to 95th percentile
     monotone: bool
     pitch_series: list[TimePoint]  # median Hz per second, None when unvoiced
+    pitch_variation_series: list[TimePoint] = []  # semitone spread in a 5 s window
     intensity_mean_db: float | None
     intensity_std_db: float | None
     volume_series: list[TimePoint]  # mean dB per second while speaking

@@ -233,12 +233,29 @@ export interface TimePoint {
 
 export interface PacingResult {
   wpm_overall: number
+  wpm_articulation: number
   wpm_series: TimePoint[]
+  wpm_variability: number
   pauses: { start: number; end: number; duration: number; kind: 'effective' | 'awkward' | 'hesitation' }[]
+  pause_count: number
+  awkward_pause_count: number
+  effective_pause_count: number
+  pause_ratio: number
+  longest_pause_s: number
+  speaking_time_s: number
 }
 
 export interface VoiceResult {
+  pitch_median_hz: number | null
+  pitch_std_semitones: number | null
+  pitch_range_semitones: number | null
+  monotone: boolean
   pitch_series: TimePoint[]
+  pitch_variation_series?: TimePoint[]
+  intensity_mean_db: number | null
+  intensity_std_db: number | null
+  quiet_ratio: number
+  energy_trend_db_per_min: number | null
   volume_series: TimePoint[]
   tone: string
   tone_reasons: string[]
@@ -253,6 +270,20 @@ export interface EmotionPoint {
 export interface BodyResult {
   eye_contact_series: TimePoint[]
   eye_contact_ratio: number | null
+  face_detected_ratio: number
+  pose_detected_ratio: number
+  slouch_ratio: number | null
+  head_down_ratio: number | null
+  tilt_ratio: number | null
+  lean_ratio: number | null
+  hands_visible_ratio: number | null
+  gestures_per_min: number | null
+  open_gesture_ratio: number | null
+  arms_crossed_ratio: number | null
+  face_touch_count: number
+  fidget_ratio: number | null
+  sway_ratio: number | null
+  smile_ratio: number | null
   emotions: Record<string, number>
   emotion_timeline: EmotionPoint[]
 }
