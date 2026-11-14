@@ -27,3 +27,17 @@ body {
 :lang(ur) .tabular-nums {
   font-family: var(--font-sans);
 }
+
+/* Live feedback: a filler-word toast that fades out, and a brief flash on the filler card. */
+@keyframes ss-toast {
+  0% { opacity: 0; }
+  10%, 70% { opacity: 1; }
+  100% { opacity: 0; }
+}
+@keyframes ss-flash {
+  0% { background-color: rgb(251 191 36 / 0.35); }
+  100% { background-color: transparent; }
+}
+@media (prefers-reduced-motion: reduce) {
+  [class*="animate-[ss-"] { animation: none !important; }
+}

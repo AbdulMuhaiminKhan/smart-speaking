@@ -7,6 +7,8 @@ import { LiveAudioStream, type LiveStats } from '../live/audioStream'
 import type { Baseline } from '../live/bodyRules'
 import { drawFrame, type FrameChecks } from '../live/overlay'
 import { BodyTracker } from '../live/tracker'
+import { meterLevel, newFillers, PAUSE_WARN_S, PauseTracker } from '../live/feedback'
+import { PaceGauge } from '../components/PaceGauge'
 import { extensionFor, Recording } from '../live/recorder'
 import { useI18n } from '../i18n'
 import { LANGS, type MessageKey } from '../i18n/core'
@@ -38,6 +40,23 @@ function wpmHint(wpm: number | null): MessageKey {
   return 'live.pace_good'
 }
 
+/** A short, quiet tone so filler alerts can be heard without looking. */
+function softBeep(ctx: AudioContext) {
+  try {
+    const osc = ctx.createOscillator()
+    const gain = ctx.createGain()
+    osc.frequency.value = 660
+    gain.gain.setValueAtTime(0.0001, ctx.currentTime)
+    gain.gain.exponentialRampToValueAtTime(0.08, ctx.currentTime + 0.02)
+    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.18)
+    osc.connect(gain).connect(ctx.destination)
+    osc.start()
+    osc.stop(ctx.currentTime + 0.2)
+  } catch {
+    // audio may be closed already
+  }
+}
+
 export function LivePage() {
   const navigate = useNavigate()
   const { t, lang } = useI18n()
@@ -67,6 +86,16 @@ export function LivePage() {
   const [trackerNote, setTrackerNote] = useState<string | null>(null)
   const [phase, setPhase] = useState<Phase>('idle')
   const [stats, setStats] = useState<LiveStats | null>(null)
+  const lastCounts = useRef<Record<string, number>>({})
+  const [alert, setAlert] = useState<{ phrase: string; id: number } | null>(null)
+  const [beep, setBeep] = useState(false)
+  const beepRef = useRef(false)
+  beepRef.current = beep
+  const [level, setLevel] = useState(0)
+  const [silence, setSilence] = useState(0)
+  const pauseTracker = useRef(new PauseTracker())
+  const lastLevelUi = useRef(0)
+  const peak = useRef(0)
   const [elapsed, setElapsed] = useState(0)
   const [mode, setMode] = useState<SessionMode>('free_talk')
   const [target, setTarget] = useState<number | null>(null)
@@ -241,6 +270,11 @@ export function LivePage() {
     setError(null)
     setNotice(null)
     setStats(null)
+    lastCounts.current = {}
+    pauseTracker.current = new PauseTracker()
+    setAlert(null)
+    setSilence(0)
+    setLevel(0)
     setPhase('starting')
     const audioCtx = LiveAudioStream.createContext() // must happen before the first await
     try {
@@ -263,7 +297,25 @@ export function LivePage() {
         })
         .catch(() => setTrackerNote(t('live.tracker_failed')))
       const audio = new LiveAudioStream({
-        onStats: setStats,
+        onStats: (s) => {
+          const fresh = newFillers(lastCounts.current, s.filler_counts)
+          lastCounts.current = s.filler_counts
+          if (fresh.length) {
+            setAlert({ phrase: fresh[fresh.length - 1], id: Date.now() })
+            if (beepRef.current) softBeep(audioCtx)
+          }
+          setStats(s)
+        },
+        onLevel: (rms, at) => {
+          peak.current = Math.max(peak.current, rms)
+          const p = pauseTracker.current.update(rms, at)
+          if (at - lastLevelUi.current > 100) {
+            lastLevelUi.current = at
+            setLevel(meterLevel(peak.current))
+            peak.current = 0
+            setSilence(p.silenceS)
+          }
+        },
         onError: (m) => setNotice(m === 'unavailable' ? t('live.feedback_unavailable') : t('live.model_failed')),
       })
       audioRef.current = audio
@@ -348,6 +400,15 @@ export function LivePage() {
           <div dir="ltr" className="relative aspect-video overflow-hidden rounded-xl bg-slate-900">
             <video ref={videoRef} muted playsInline className="absolute inset-0 h-full w-full -scale-x-100 object-cover" />
             <canvas ref={canvasRef} className="pointer-events-none absolute inset-0 h-full w-full object-cover" />
+            {phase === 'recording' && alert && (
+              <div
+                key={alert.id}
+                role="status"
+                className="absolute left-1/2 top-3 -translate-x-1/2 animate-[ss-toast_2.5s_ease-out_forwards] rounded-full bg-amber-400 px-4 py-1.5 text-sm font-medium text-slate-900 shadow"
+              >
+                <bdi>“{alert.phrase}”</bdi> · {t('live.filler_alert')}
+              </div>
+            )}
             {phase === 'recording' && calibrating && (
               <div className="absolute inset-x-0 bottom-4 mx-auto w-fit rounded-full bg-black/70 px-4 py-2 text-sm text-white">
                 {t('live.look_at_camera')}
@@ -493,10 +554,33 @@ export function LivePage() {
         <aside className="space-y-4">
           <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
             <p className="text-xs uppercase tracking-wide text-slate-500">{t('live.pace')}</p>
-            <p className={`text-4xl font-semibold tabular-nums ${wpmTone(wpm)}`}>{wpm ?? '–'}</p>
-            <p className="text-sm text-slate-500">{t('common.wpm')} · {t(wpmHint(wpm))}</p>
+            <PaceGauge wpm={wpm} />
+            <p className={`mt-1 text-center text-sm ${wpmTone(wpm)}`}>{t(wpmHint(wpm))}</p>
           </div>
           <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+            <p className="text-xs uppercase tracking-wide text-slate-500">{t('live.voice_level')}</p>
+            <div dir="ltr" className="mt-2 h-2.5 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+              <div
+                className={`h-full rounded-full transition-[width] duration-100 ${level > 0.85 ? 'bg-amber-500' : level < 0.35 ? 'bg-sky-400' : 'bg-emerald-500'}`}
+                style={{ width: `${Math.round(level * 100)}%` }}
+              />
+            </div>
+            <p className={`mt-2 text-sm ${silence >= PAUSE_WARN_S ? 'font-medium text-amber-600' : 'text-slate-500'}`}>
+              {phase !== 'recording'
+                ? '–'
+                : silence >= PAUSE_WARN_S
+                  ? t('live.long_pause', { n: silence.toFixed(0) })
+                  : silence > 0.8
+                    ? t('live.pausing', { n: silence.toFixed(1) })
+                    : level < 0.35 && level > 0
+                      ? t('live.speak_up')
+                      : t('live.speaking')}
+            </p>
+          </div>
+          <div
+            key={alert?.id}
+            className={`rounded-xl border bg-white p-4 dark:bg-slate-900 ${alert && Date.now() - alert.id < 2500 ? 'animate-[ss-flash_1.2s_ease-out] border-amber-400' : 'border-slate-200 dark:border-slate-800'}`}
+          >
             <p className="text-xs uppercase tracking-wide text-slate-500">{t('live.fillers')}</p>
             <p className={`text-4xl font-semibold tabular-nums ${(stats?.fillers ?? 0) > 5 ? 'text-amber-500' : ''}`}>
               {stats?.fillers ?? 0}
@@ -539,6 +623,10 @@ export function LivePage() {
           <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
             <input type="checkbox" checked={overlayOn} onChange={(e) => setOverlayOn(e.target.checked)} />
             {t('live.show_boxes')}
+          </label>
+          <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
+            <input type="checkbox" checked={beep} onChange={(e) => setBeep(e.target.checked)} />
+            {t('live.beep')}
           </label>
           <div className="rounded-xl border border-slate-200 bg-white p-4 text-sm dark:border-slate-800 dark:bg-slate-900">
             <p className="text-xs uppercase tracking-wide text-slate-500">{t('live.last_heard')}</p>

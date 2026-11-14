@@ -389,6 +389,17 @@ export const en = {
   'modes.light_red': 'Red: time is up',
   'modes.prompts_title': 'Topic and questions',
   'modes.target': 'Target length: {time}',
+  'live.voice_level': 'Voice level',
+  'live.speaking': 'Speaking',
+  'live.pausing': 'Pause {n} s',
+  'live.long_pause': 'Long pause ({n} s). Pick up the next point.',
+  'live.speak_up': 'A bit quiet. Speak up.',
+  'live.filler_alert': 'filler word',
+  'live.beep': 'Beep on filler words',
+  'live.zone_none': 'waiting for speech',
+  'live.zone_slow': 'slow',
+  'live.zone_good': 'comfortable',
+  'live.zone_fast': 'fast',
 } as const
 
 export type MessageKey = keyof typeof en
