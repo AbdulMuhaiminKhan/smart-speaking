@@ -45,7 +45,7 @@ export function Layout() {
               <Mark />
               {t('app.name')}
             </NavLink>
-            <LanguageSwitcher className="h-8 border-white/20 bg-score-800 py-0 text-white lg:hidden" />
+            <LanguageSwitcher className="h-9 w-28 border-white/20 bg-score-800 py-0 text-white lg:hidden" />
           </div>
           <nav className="-mx-1 flex gap-1 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:mt-4 lg:flex-col lg:overflow-visible">
             {NAV.map((n) => (
