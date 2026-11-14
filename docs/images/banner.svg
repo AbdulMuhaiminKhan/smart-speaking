@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 300" width="1200" height="300" role="img" aria-label="SmartSpeaking: a free, local AI public speaking coach">
+  <rect width="1200" height="300" rx="16" fill="#141b3c"/>
+  <!-- A stave with a few notes: the app reads a talk like a score. -->
+  <g stroke="#ffffff" stroke-opacity="0.18" stroke-width="1.2">
+    <line x1="560" x2="1140" y1="110" y2="110"/>
+    <line x1="560" x2="1140" y1="132" y2="132"/>
+    <line x1="560" x2="1140" y1="154" y2="154"/>
+    <line x1="560" x2="1140" y1="176" y2="176"/>
+    <line x1="560" x2="1140" y1="198" y2="198"/>
+    <line x1="705" x2="705" y1="110" y2="198"/>
+    <line x1="850" x2="850" y1="110" y2="198"/>
+    <line x1="995" x2="995" y1="110" y2="198"/>
+  </g>
+  <line x1="1140" x2="1140" y1="110" y2="198" stroke="#ffffff" stroke-opacity="0.45" stroke-width="4"/>
+  <g fill="#e6c36a" stroke="#e6c36a" stroke-width="2.4">
+    <ellipse cx="600" cy="187" rx="11" ry="7.5" transform="rotate(-22 600 187)"/>
+    <ellipse cx="650" cy="165" rx="11" ry="7.5" transform="rotate(-22 650 165)"/>
+    <ellipse cx="745" cy="143" rx="11" ry="7.5" transform="rotate(-22 745 143)" fill="none"/>
+    <ellipse cx="800" cy="176" rx="11" ry="7.5" transform="rotate(-22 800 176)"/>
+    <ellipse cx="895" cy="121" rx="11" ry="7.5" transform="rotate(-22 895 121)"/>
+    <ellipse cx="945" cy="154" rx="11" ry="7.5" transform="rotate(-22 945 154)" fill="none"/>
+    <ellipse cx="1040" cy="143" rx="11" ry="7.5" transform="rotate(-22 1040 143)"/>
+    <ellipse cx="1095" cy="132" rx="11" ry="7.5" transform="rotate(-22 1095 132)"/>
+  </g>
+  <text x="560" y="90" fill="#cfd8f5" font-family="Iowan Old Style, Charter, Palatino, Georgia, serif" font-style="italic" font-weight="700" font-size="26">Moderato</text>
+  <!-- Mark -->
+  <g transform="translate(60 86)">
+    <rect width="64" height="64" rx="14" fill="#2f55d4"/>
+    <g stroke="#ffffff" stroke-opacity="0.45" stroke-width="2">
+      <line x1="10" x2="54" y1="18" y2="18"/><line x1="10" x2="54" y1="25" y2="25"/>
+      <line x1="10" x2="54" y1="32" y2="32"/><line x1="10" x2="54" y1="39" y2="39"/>
+      <line x1="10" x2="54" y1="46" y2="46"/>
+    </g>
+    <ellipse cx="26" cy="39" rx="6.6" ry="4.8" transform="rotate(-20 26 39)" fill="#ffffff"/>
+    <path d="M32 38V15c5 1.2 9.2 4 10.8 8.8" stroke="#ffffff" stroke-width="3.2" fill="none" stroke-linecap="round"/>
+  </g>
+  <text x="142" y="132" fill="#ffffff" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-weight="700" font-size="44">SmartSpeaking</text>
+  <text x="62" y="196" fill="#cfd8f5" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="21">A free, private AI public speaking coach</text>
+  <text x="62" y="226" fill="#8f9bc4" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="17">Runs on your own computer · English · Deutsch · اردو</text>
+</svg>
