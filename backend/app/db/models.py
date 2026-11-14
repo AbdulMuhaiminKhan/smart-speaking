@@ -34,6 +34,22 @@ class SessionMode(enum.StrEnum):
     free_talk = "free_talk"
     timed_pitch = "timed_pitch"
     script = "script"
+    impromptu = "impromptu"  # a random topic, short prep
+    elevator_pitch = "elevator_pitch"  # 30 or 60 seconds
+    interview = "interview"  # one or more questions, answered in turn
+    table_topics = "table_topics"  # Toastmasters style: 1 to 2 minutes, no prep
+
+
+# Modes where the speaker aims for a length (the target is scored).
+TIMED_MODES = frozenset(
+    {
+        SessionMode.timed_pitch,
+        SessionMode.impromptu,
+        SessionMode.elevator_pitch,
+        SessionMode.interview,
+        SessionMode.table_topics,
+    }
+)
 
 
 class InputSource(enum.StrEnum):
@@ -84,9 +100,13 @@ class PracticeSession(Base):
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
     title: Mapped[str] = mapped_column(String(200))
     source: Mapped[InputSource] = mapped_column(Enum(InputSource, native_enum=False))
-    mode: Mapped[SessionMode] = mapped_column(Enum(SessionMode, native_enum=False))
+    mode: Mapped[SessionMode] = mapped_column(
+        Enum(SessionMode, native_enum=False, length=32, validate_strings=True)
+    )
     target_seconds: Mapped[int | None] = mapped_column(Integer, nullable=True)
     script_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Topic or questions shown to the speaker: [{"t": seconds into the recording, "text": ...}]
+    prompts: Mapped[list[dict[str, Any]]] = mapped_column(JsonType, default=list)
     language: Mapped[str] = mapped_column(String(8), default="en")
     model_preset: Mapped[str] = mapped_column(String(16), default="balanced")
 

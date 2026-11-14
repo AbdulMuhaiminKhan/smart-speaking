@@ -197,6 +197,29 @@ export function SessionPage() {
         </div>
       )}
 
+      {(session.prompts.length > 0 || session.target_seconds) && (
+        <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <p className="font-medium">{t(`mode.${session.mode}`)}</p>
+            {session.target_seconds && (
+              <p className="text-sm text-slate-500">{t('modes.target', { time: formatTime(session.target_seconds) })}</p>
+            )}
+          </div>
+          {session.prompts.length > 0 && (
+            <ul className="mt-2 space-y-1">
+              {session.prompts.map((p, i) => (
+                <li key={i}>
+                  <button type="button" onClick={() => seek(p.t)} className="flex gap-3 text-start text-sm hover:text-brand-600">
+                    <span className="font-mono text-xs text-slate-400">{formatTime(p.t)}</span>
+                    <span dir="auto">{p.text}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
       {fileWarnings.length > 0 && (
         <ul className="rounded-xl bg-amber-50 p-4 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-200">
           {fileWarnings.map((w) => (
@@ -225,6 +248,7 @@ export function SessionPage() {
           {report && (
             <VideoTimeline
               issues={report.issues}
+              markers={session.prompts.map((p, i) => ({ id: `prompt-${i}`, t: p.t, label: p.text, kind: 'prompt' as const }))}
               duration={duration || session.duration_s || 0}
               currentTime={currentTime}
               onSeek={seek}

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { uploadSession, type Lang } from '../api/client'
+import { uploadSession, type Lang, type Prompt, type SessionMode } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
 import { ProgressBar } from '../components/ProgressBar'
 import { LiveAudioStream, type LiveStats } from '../live/audioStream'
@@ -12,8 +12,15 @@ import { useI18n } from '../i18n'
 import { LANGS, type MessageKey } from '../i18n/core'
 import { errorText } from '../lib/errors'
 import { formatTime } from '../lib/format'
+import { PromptPicker } from '../components/PromptPicker'
+import { isPromptMode, lightAt, MODE_TARGETS, PREP_SECONDS, randomPrompt, timingLights } from '../lib/prompts'
 
-type Phase = 'idle' | 'starting' | 'recording' | 'uploading'
+type Phase = 'idle' | 'starting' | 'prep' | 'recording' | 'uploading'
+
+const LIVE_MODES: SessionMode[] = ['free_talk', 'timed_pitch', 'impromptu', 'elevator_pitch', 'interview', 'table_topics']
+// Modes that stop by themselves at the target; the others run a little over, as in real life.
+const HARD_STOP: SessionMode[] = ['timed_pitch', 'elevator_pitch']
+const OVERRUN_S = 30
 
 const CALIBRATION_S = 3
 const EYE_WINDOW = 150 // frames in the rolling eye-contact window (about 10 s)
@@ -61,7 +68,13 @@ export function LivePage() {
   const [phase, setPhase] = useState<Phase>('idle')
   const [stats, setStats] = useState<LiveStats | null>(null)
   const [elapsed, setElapsed] = useState(0)
+  const [mode, setMode] = useState<SessionMode>('free_talk')
   const [target, setTarget] = useState<number | null>(null)
+  const [prompt, setPrompt] = useState('')
+  const promptsRef = useRef<Prompt[]>([])
+  const [prompts, setPrompts] = useState<Prompt[]>([])
+  const [prepLeft, setPrepLeft] = useState(0)
+  const skipPrep = useRef<(() => void) | null>(null)
   const [title, setTitle] = useState('')
   const [notice, setNotice] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -174,11 +187,55 @@ export function LivePage() {
     return () => window.clearInterval(id)
   }, [phase])
 
-  // Timed pitch: stop automatically at the target.
+  // Stop automatically at the target (or a little after it for open-ended modes).
   useEffect(() => {
-    if (phase === 'recording' && target !== null && elapsed >= target) void stop()
+    if (phase !== 'recording' || target === null) return
+    const limit = HARD_STOP.includes(mode) ? target : mode === 'interview' ? Infinity : target + OVERRUN_S
+    if (elapsed >= limit) void stop()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [elapsed, phase, target])
+  }, [elapsed, phase, target, mode])
+
+  // A new spoken language gets a prompt in that language.
+  useEffect(() => {
+    if (isPromptMode(mode) && phase === 'idle') setPrompt(randomPrompt(mode, speechLang))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [speechLang])
+
+  function chooseMode(m: SessionMode) {
+    setMode(m)
+    setTarget(MODE_TARGETS[m]?.[0] ?? null)
+    setPrompt(isPromptMode(m) ? randomPrompt(m, speechLang) : '')
+  }
+
+  /** Counts down the thinking time; resolves early if the speaker skips it. */
+  function prepCountdown(seconds: number): Promise<void> {
+    return new Promise((resolve) => {
+      let left = seconds
+      setPrepLeft(left)
+      setPhase('prep')
+      const id = window.setInterval(() => {
+        left -= 1
+        setPrepLeft(left)
+        if (left <= 0) done()
+      }, 1000)
+      const done = () => {
+        window.clearInterval(id)
+        skipPrep.current = null
+        resolve()
+      }
+      skipPrep.current = done
+    })
+  }
+
+  function nextQuestion() {
+    if (mode !== 'interview') return
+    const asked = new Set(promptsRef.current.map((p) => p.text))
+    let q = randomPrompt('interview', speechLang, prompt)
+    for (let i = 0; i < 10 && asked.has(q); i++) q = randomPrompt('interview', speechLang, q)
+    setPrompt(q)
+    promptsRef.current = [...promptsRef.current, { t: Math.round((Date.now() - startedAt.current) / 100) / 10, text: q }]
+    setPrompts(promptsRef.current)
+  }
 
   async function start() {
     setError(null)
@@ -210,11 +267,15 @@ export function LivePage() {
         onError: (m) => setNotice(m === 'unavailable' ? t('live.feedback_unavailable') : t('live.model_failed')),
       })
       audioRef.current = audio
+      const prep = isPromptMode(mode) ? (PREP_SECONDS[mode] ?? 0) : 0
+      if (prep > 0) await prepCountdown(prep)
       await audio.start(stream, audioCtx, speechLang).catch(() => setNotice(t('live.feedback_unavailable')))
       const rec = new Recording(stream)
       recRef.current = rec
       rec.start()
       startedAt.current = Date.now()
+      promptsRef.current = prompt ? [{ t: 0, text: prompt }] : []
+      setPrompts(promptsRef.current)
       setElapsed(0)
       setPhase('recording')
       void trackerReady
@@ -255,8 +316,9 @@ export function LivePage() {
         filename: `live${extensionFor(rec.mimeType)}`,
         title: name,
         source: 'live',
-        mode: target ? 'timed_pitch' : 'free_talk',
+        mode,
         targetSeconds: target ?? undefined,
+        prompts: promptsRef.current,
         language: speechLang,
         onProgress: setUploadProgress,
       })
@@ -268,7 +330,9 @@ export function LivePage() {
   }
 
   const wpm = stats?.wpm_recent ?? null
-  const remaining = target !== null ? Math.max(0, target - elapsed) : null
+  const remaining = target !== null && mode !== 'interview' ? Math.max(0, target - elapsed) : null
+  const light = phase === 'recording' ? lightAt(timingLights(mode, target), elapsed) : 'none'
+  const LIGHT_CLASS = { none: '', green: 'bg-emerald-500', amber: 'bg-amber-400', red: 'bg-red-500' } as const
 
   return (
     <div className="space-y-6">
@@ -292,6 +356,34 @@ export function LivePage() {
             {phase === 'idle' && (
               <div className="absolute inset-0 grid place-items-center text-slate-300">{t('live.camera_off')}</div>
             )}
+            {phase === 'prep' && (
+              <div className="absolute inset-0 grid place-items-center bg-slate-950/70 p-6 text-center text-white">
+                <div>
+                  <p className="text-sm uppercase tracking-widest text-slate-300">{t('modes.prep')}</p>
+                  <p className="mt-2 text-6xl font-semibold tabular-nums">{prepLeft}</p>
+                  <p dir="auto" className="mx-auto mt-4 max-w-lg text-xl">{prompt}</p>
+                  <button
+                    type="button"
+                    onClick={() => skipPrep.current?.()}
+                    className="mt-6 rounded-md bg-white px-4 py-2 text-sm font-medium text-slate-900"
+                  >
+                    {t('modes.start_now')}
+                  </button>
+                </div>
+              </div>
+            )}
+            {phase === 'recording' && prompt && (
+              <div dir="auto" className="absolute inset-x-3 bottom-3 rounded-lg bg-black/65 px-4 py-2 text-center text-white">
+                {prompt}
+              </div>
+            )}
+            {light !== 'none' && (
+              <div
+                className={`absolute right-3 top-3 h-8 w-8 rounded-full ring-4 ring-white/40 ${LIGHT_CLASS[light]}`}
+                title={t(`modes.light_${light}`)}
+                aria-label={t(`modes.light_${light}`)}
+              />
+            )}
             {phase === 'recording' && (
               <div className="absolute left-3 top-3 flex items-center gap-2 rounded-full bg-black/60 px-3 py-1 text-sm text-white">
                 <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-red-500" />
@@ -310,23 +402,47 @@ export function LivePage() {
                 className="mt-1 w-full rounded-md border border-slate-300 bg-transparent px-3 py-2 dark:border-slate-700"
               />
             </label>
-            <div>
-              <span className="text-sm font-medium">{t('live.length')}</span>
-              <div className="mt-1 flex gap-2">
-                {[null, 60, 180, 300].map((s) => (
+            <div className="w-full">
+              <span className="text-sm font-medium">{t('upload.mode')}</span>
+              <div className="mt-1 flex flex-wrap gap-2">
+                {LIVE_MODES.map((m) => (
                   <button
-                    key={String(s)}
+                    key={m}
                     type="button"
-                    onClick={() => setTarget(s)}
+                    onClick={() => chooseMode(m)}
+                    title={t(`modes.${m}_hint`)}
                     className={`rounded-md border px-3 py-2 text-sm ${
-                      target === s ? 'border-brand-600 bg-brand-50 dark:bg-slate-800' : 'border-slate-300 dark:border-slate-700'
+                      mode === m ? 'border-brand-600 bg-brand-50 dark:bg-slate-800' : 'border-slate-300 dark:border-slate-700'
                     }`}
                   >
-                    {s === null ? t('mode.free_talk') : t('mode.min_pitch', { n: s / 60 })}
+                    {t(`mode.${m}`)}
                   </button>
                 ))}
               </div>
+              <p className="mt-1 text-xs text-slate-500">{t(`modes.${mode}_hint`)}</p>
             </div>
+            {(MODE_TARGETS[mode]?.length ?? 0) > 1 && (
+              <div>
+                <span className="text-sm font-medium">{t('live.length')}</span>
+                <div className="mt-1 flex gap-2">
+                  {MODE_TARGETS[mode]!.map((sec) => (
+                    <button
+                      key={sec}
+                      type="button"
+                      onClick={() => setTarget(sec)}
+                      className={`rounded-md border px-3 py-2 text-sm ${
+                        target === sec ? 'border-brand-600 bg-brand-50 dark:bg-slate-800' : 'border-slate-300 dark:border-slate-700'
+                      }`}
+                    >
+                      {sec < 60 ? t('common.seconds', { n: sec }) : t('mode.minutes', { n: sec / 60 })}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            {isPromptMode(mode) && (
+              <PromptPicker mode={mode} lang={speechLang} value={prompt} onChange={setPrompt} className="w-full" />
+            )}
             <label>
               <span className="text-sm font-medium">{t('live.speech_language')}</span>
               <select
@@ -351,6 +467,18 @@ export function LivePage() {
           </div>
         )}
         {phase === 'starting' && <p className="text-slate-500">{t('live.starting')}</p>}
+        {phase === 'recording' && mode === 'interview' && (
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={nextQuestion}
+              className="rounded-md border border-brand-600 px-4 py-2 text-sm font-medium text-brand-700 dark:text-white"
+            >
+              {t('modes.next_question')}
+            </button>
+            <span className="text-sm text-slate-500">{t('modes.questions_asked', { n: prompts.length })}</span>
+          </div>
+        )}
         {phase === 'recording' && (
           <button
             type="button"

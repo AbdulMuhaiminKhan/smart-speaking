@@ -1,7 +1,19 @@
 // Typed client for the SmartSpeaking API. Mirrors backend/app/schemas.
 
 export type SessionStatus = 'uploaded' | 'queued' | 'processing' | 'completed' | 'failed'
-export type SessionMode = 'free_talk' | 'timed_pitch' | 'script'
+export type SessionMode =
+  | 'free_talk'
+  | 'timed_pitch'
+  | 'script'
+  | 'impromptu'
+  | 'elevator_pitch'
+  | 'interview'
+  | 'table_topics'
+
+export interface Prompt {
+  t: number
+  text: string
+}
 export type ModelPreset = 'fast' | 'balanced' | 'accurate'
 
 export interface PracticeSession {
@@ -10,6 +22,7 @@ export interface PracticeSession {
   source: 'upload' | 'live'
   mode: SessionMode
   target_seconds: number | null
+  prompts: Prompt[]
   language: Lang
   model_preset: ModelPreset
   original_filename: string
@@ -108,6 +121,7 @@ export interface UploadOptions {
   mode?: SessionMode
   targetSeconds?: number
   scriptText?: string
+  prompts?: Prompt[]
   language?: string
   modelPreset?: ModelPreset
   onProgress?: (fraction: number) => void
@@ -123,6 +137,7 @@ export function uploadSession(opts: UploadOptions): Promise<PracticeSession> {
   form.append('mode', opts.mode ?? 'free_talk')
   if (opts.targetSeconds) form.append('target_seconds', String(opts.targetSeconds))
   if (opts.scriptText) form.append('script_text', opts.scriptText)
+  if (opts.prompts?.length) form.append('prompts', JSON.stringify(opts.prompts))
   form.append('language', opts.language ?? 'en')
   form.append('model_preset', opts.modelPreset ?? 'balanced')
 

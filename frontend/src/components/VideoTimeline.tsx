@@ -16,15 +16,29 @@ const CATEGORY_COLORS: Record<Category, string> = {
   body_language: 'bg-teal-500',
 }
 
+export interface TimelineMarker {
+  id: string
+  t: number
+  label: string
+  kind: 'prompt' | 'note'
+}
+
+const MARKER_COLORS: Record<TimelineMarker['kind'], string> = {
+  prompt: 'bg-brand-600',
+  note: 'bg-fuchsia-500',
+}
+
 interface Props {
   issues: Issue[]
+  markers?: TimelineMarker[]
   duration: number
   currentTime: number
   onSeek: (t: number) => void
 }
 
-export function VideoTimeline({ issues, duration, currentTime, onSeek }: Props) {
+export function VideoTimeline({ issues, markers = [], duration, currentTime, onSeek }: Props) {
   const [hover, setHover] = useState<Issue | null>(null)
+  const [hoverMarker, setHoverMarker] = useState<TimelineMarker | null>(null)
   const { t, tk } = useI18n()
   if (!duration) return null
   const pct = (t: number) => `${Math.min(100, Math.max(0, (t / duration) * 100))}%`
@@ -34,7 +48,11 @@ export function VideoTimeline({ issues, duration, currentTime, onSeek }: Props) 
     <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
       <div className="mb-2 flex items-center justify-between text-sm">
         <span className="font-medium">{t('timeline.title')}</span>
-        <span className="text-xs text-slate-500">{hover ? `${formatTime(hover.start)} · ${issueMessage(hover, tk)}` : t('timeline.hint')}</span>
+        <span className="text-xs text-slate-500">{hover
+            ? `${formatTime(hover.start)} · ${issueMessage(hover, tk)}`
+            : hoverMarker
+              ? `${formatTime(hoverMarker.t)} · ${hoverMarker.label}`
+              : t('timeline.hint')}</span>
       </div>
       <div
         dir="ltr"
@@ -44,6 +62,25 @@ export function VideoTimeline({ issues, duration, currentTime, onSeek }: Props) 
           onSeek(((e.clientX - rect.left) / rect.width) * duration)
         }}
       >
+        {markers.length > 0 && (
+          <div className="relative h-5">
+            {markers.map((m) => (
+              <button
+                key={m.id}
+                type="button"
+                aria-label={`${formatTime(m.t)} ${m.label}`}
+                onMouseEnter={() => setHoverMarker(m)}
+                onMouseLeave={() => setHoverMarker(null)}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onSeek(m.t)
+                }}
+                className={`absolute top-0 h-5 w-2.5 -translate-x-1/2 rounded-b-full rounded-t-sm ${MARKER_COLORS[m.kind]} hover:scale-125`}
+                style={{ left: pct(m.t) }}
+              />
+            ))}
+          </div>
+        )}
         {lanes.map((cat) => (
           <div key={cat} className="relative h-4 rounded bg-slate-100 dark:bg-slate-800" title={t(`cat.${cat}`)}>
             {issues

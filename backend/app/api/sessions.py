@@ -7,12 +7,14 @@ from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from fastapi.responses import FileResponse, Response
+from pydantic import TypeAdapter, ValidationError
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.api.deps import UserDep
 from app.config import MODEL_PRESETS, Settings, get_settings
 from app.db.models import (
+    TIMED_MODES,
     AnalysisResult,
     InputSource,
     PracticeSession,
@@ -22,11 +24,12 @@ from app.db.models import (
 )
 from app.db.session import get_db
 from app.pipeline.language import SUPPORTED_LANGUAGES
-from app.schemas.api import SessionOut
+from app.schemas.api import Prompt, SessionOut
 from app.services import storage
 from app.services.queue import Enqueuer, get_enqueuer
 
 router = APIRouter(prefix="/api/sessions", tags=["sessions"])
+PromptList = TypeAdapter(list[Prompt])
 
 DbDep = Annotated[Session, Depends(get_db)]
 SettingsDep = Annotated[Settings, Depends(get_settings)]
@@ -34,6 +37,20 @@ SettingsDep = Annotated[Settings, Depends(get_settings)]
 
 def error(status_code: int, code: str, message: str) -> HTTPException:
     return HTTPException(status_code=status_code, detail={"code": code, "message": message})
+
+
+MAX_PROMPTS = 20
+
+
+def parse_prompts(raw: str | None) -> list[dict[str, Any]]:
+    """Prompts arrive as JSON: [{"t": seconds, "text": "..."}]. Invalid input is a 422."""
+    if not raw:
+        return []
+    try:
+        items = PromptList.validate_json(raw)
+    except ValidationError:
+        raise error(422, "bad_prompts", "prompts must be a JSON list of {t, text}.") from None
+    return [p.model_dump() for p in items[:MAX_PROMPTS]]
 
 
 def get_owned_session(session_id: uuid.UUID, db: Session, user: User) -> PracticeSession:
@@ -57,6 +74,7 @@ def create_session(
     script_text: Annotated[str | None, Form(max_length=50_000)] = None,
     language: Annotated[str, Form(max_length=8)] = "en",
     model_preset: Annotated[str, Form()] = "balanced",
+    prompts: Annotated[str | None, Form(max_length=20_000)] = None,
 ) -> PracticeSession:
     if model_preset not in MODEL_PRESETS:
         raise error(422, "bad_preset", f"model_preset must be one of {sorted(MODEL_PRESETS)}.")
@@ -64,6 +82,7 @@ def create_session(
         raise error(422, "bad_language", f"language must be one of {list(SUPPORTED_LANGUAGES)}.")
     if mode == SessionMode.script and not (script_text and script_text.strip()):
         raise error(422, "script_required", "Script mode needs the script text.")
+    prompt_list = parse_prompts(prompts)
 
     filename = file.filename or "recording"
     try:
@@ -96,8 +115,9 @@ def create_session(
         title=(title or "").strip() or filename.rsplit(".", 1)[0][:200] or "Practice session",
         source=source,
         mode=mode,
-        target_seconds=target_seconds if mode == SessionMode.timed_pitch else None,
+        target_seconds=target_seconds if mode in TIMED_MODES else None,
         script_text=script_text if mode == SessionMode.script else None,
+        prompts=prompt_list,
         language=language,
         model_preset=model_preset,
         original_filename=filename[:255],

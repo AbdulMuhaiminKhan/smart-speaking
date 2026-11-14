@@ -81,3 +81,18 @@ def test_upload_accepts_supported_languages_only(client: TestClient) -> None:
     assert ok["status"] == 201 and ok["body"]["language"] == "ur"
     bad = upload(client, language="fr")
     assert bad["status"] == 422 and bad["body"]["code"] == "bad_language"
+
+
+def test_practice_modes_keep_target_and_prompts(client: TestClient) -> None:
+    prompts = '[{"t": 0, "text": "Tell me about yourself."}, {"t": 42.5, "text": "Why us?"}]'
+    r = upload(client, mode="interview", target_seconds="120", prompts=prompts)
+    assert r["status"] == 201
+    body = r["body"]
+    assert body["mode"] == "interview" and body["target_seconds"] == 120
+    assert [p["text"] for p in body["prompts"]] == ["Tell me about yourself.", "Why us?"]
+
+    free = upload(client, mode="free_talk", target_seconds="120")
+    assert free["body"]["target_seconds"] is None
+
+    bad = upload(client, mode="impromptu", prompts='[{"t": -1}]')
+    assert bad["status"] == 422 and bad["body"]["code"] == "bad_prompts"

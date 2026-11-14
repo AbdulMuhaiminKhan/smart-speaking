@@ -3,10 +3,12 @@ import { useNavigate } from 'react-router-dom'
 import { uploadSession, type Lang, type ModelPreset, type SessionMode } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
 import { ProgressBar } from '../components/ProgressBar'
+import { PromptPicker } from '../components/PromptPicker'
 import { useI18n } from '../i18n'
 import { LANGS, type MessageKey } from '../i18n/core'
 import { errorText } from '../lib/errors'
 import { formatBytes, formatTime } from '../lib/format'
+import { isPromptMode, MODE_TARGETS, randomPrompt } from '../lib/prompts'
 import { checkDuration, checkExtension, checkSize, MIN_SECONDS, readDuration } from '../lib/validateFile'
 
 const PRESETS: ModelPreset[] = ['fast', 'balanced', 'accurate']
@@ -22,7 +24,8 @@ export function UploadPage() {
   const [duration, setDuration] = useState<number | null>(null)
   const [title, setTitle] = useState('')
   const [mode, setMode] = useState<SessionMode>('free_talk')
-  const [target, setTarget] = useState(180)
+  const [target, setTarget] = useState<number | null>(null)
+  const [prompt, setPrompt] = useState('')
   const [script, setScript] = useState('')
   const [preset, setPreset] = useState<ModelPreset>(user?.settings.model_preset ?? 'balanced')
   const [error, setError] = useState<string | null>(null)
@@ -73,7 +76,8 @@ export function UploadPage() {
         filename: file.name,
         title,
         mode,
-        targetSeconds: mode === 'timed_pitch' ? target : undefined,
+        targetSeconds: target ?? undefined,
+        prompts: isPromptMode(mode) && prompt.trim() ? [{ t: 0, text: prompt.trim() }] : undefined,
         scriptText: mode === 'script' ? script : undefined,
         modelPreset: preset,
         language: speechLang,
@@ -144,11 +148,15 @@ export function UploadPage() {
           <fieldset>
             <legend className="text-sm font-medium">{t('upload.mode')}</legend>
             <div className="mt-2 flex flex-wrap gap-2">
-              {(['free_talk', 'timed_pitch', 'script'] as const).map((value) => (
+              {(['free_talk', 'timed_pitch', 'script', 'impromptu', 'elevator_pitch', 'interview', 'table_topics'] as const).map((value) => (
                 <button
                   key={value}
                   type="button"
-                  onClick={() => setMode(value)}
+                  onClick={() => {
+                    setMode(value)
+                    setTarget(MODE_TARGETS[value]?.[0] ?? null)
+                    setPrompt(isPromptMode(value) ? randomPrompt(value, speechLang) : '')
+                  }}
                   className={`rounded-md border px-3 py-1.5 text-sm ${
                     mode === value
                       ? 'border-brand-600 bg-brand-50 text-brand-700 dark:bg-slate-800 dark:text-white'
@@ -159,9 +167,10 @@ export function UploadPage() {
                 </button>
               ))}
             </div>
-            {mode === 'timed_pitch' && (
+            <p className="mt-2 text-xs text-slate-500">{t(`modes.${mode}_hint`)}</p>
+            {(MODE_TARGETS[mode]?.length ?? 0) > 0 && (
               <div className="mt-3 flex gap-2">
-                {[60, 180, 300].map((s) => (
+                {MODE_TARGETS[mode]!.map((s) => (
                   <button
                     key={s}
                     type="button"
@@ -170,10 +179,13 @@ export function UploadPage() {
                       target === s ? 'border-brand-600 text-brand-700 dark:text-white' : 'border-slate-300 dark:border-slate-700'
                     }`}
                   >
-                    {t('mode.minutes', { n: s / 60 })}
+                    {s < 60 ? t('common.seconds', { n: s }) : t('mode.minutes', { n: s / 60 })}
                   </button>
                 ))}
               </div>
+            )}
+            {isPromptMode(mode) && (
+              <PromptPicker mode={mode} lang={speechLang} value={prompt} onChange={setPrompt} className="mt-3" />
             )}
             {mode === 'script' && (
               <textarea
