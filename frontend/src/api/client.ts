@@ -111,6 +111,22 @@ export const api = {
   retry: (id: string) => request<PracticeSession>(`/api/sessions/${id}/retry`, { method: 'POST' }),
   deleteSession: (id: string) => request<void>(`/api/sessions/${id}`, { method: 'DELETE' }),
   mediaUrl: (id: string) => `/api/sessions/${id}/media`,
+  notes: (id: string) => request<Note[]>(`/api/sessions/${id}/annotations`),
+  addNote: (id: string, t: number, text: string) => request<Note>(`/api/sessions/${id}/annotations`, jsonBody('POST', { t, text })),
+  editNote: (id: string, noteId: string, t: number, text: string) =>
+    request<Note>(`/api/sessions/${id}/annotations/${noteId}`, jsonBody('PUT', { t, text })),
+  deleteNote: (id: string, noteId: string) => request<void>(`/api/sessions/${id}/annotations/${noteId}`, { method: 'DELETE' }),
+}
+
+export interface Note {
+  id: string
+  t: number
+  text: string
+  created_at: string
+}
+
+function jsonBody(method: string, body: unknown): RequestInit {
+  return { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }
 }
 
 export interface UploadOptions {

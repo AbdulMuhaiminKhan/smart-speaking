@@ -495,4 +495,11 @@ export const de: Record<MessageKey, string> = {
   'ach.polyglot_desc': 'Übe in zwei Sprachen.',
   'ach.improver': 'Im Aufwind',
   'ach.improver_desc': 'Übertriff deine erste Bewertung um 10 Punkte.',
+  'notes.title': 'Deine Notizen',
+  'notes.add_at': 'Notiz bei {time}',
+  'notes.placeholder': 'Was willst du dir zu dieser Stelle merken?',
+  'notes.empty': 'Halte an einer beliebigen Stelle an und hefte eine Notiz daran. Notizen erscheinen als rosa Pins auf der Zeitleiste und im PDF.',
+  'notes.edit': 'Bearbeiten',
+  'notes.save_failed': 'Die Notiz konnte nicht gespeichert werden.',
+  'notes.speed': 'Tempo',
 }

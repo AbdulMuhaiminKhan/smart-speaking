@@ -5,6 +5,7 @@ import {
   reportApi,
   type BodyResult,
   type LanguageResult,
+  type Note,
   type PacingResult,
   type PracticeSession,
   type Report,
@@ -14,6 +15,7 @@ import {
 } from '../api/client'
 import { ProgressBar } from '../components/ProgressBar'
 import { StatusBadge } from '../components/StatusBadge'
+import { NotesPanel } from '../components/NotesPanel'
 import { ReportView } from '../components/ReportView'
 import { ScriptDriftCard } from '../components/ScriptDriftCard'
 import { VideoTimeline } from '../components/VideoTimeline'
@@ -39,6 +41,8 @@ export function SessionPage() {
   const [duration, setDuration] = useState(0)
   const [error, setError] = useState<string | null>(null)
   const [currentTime, setCurrentTime] = useState(0)
+  const [notes, setNotes] = useState<Note[]>([])
+  const [rate, setRate] = useState(1)
   const { t, tk, formatDate } = useI18n()
 
   const load = useCallback(async () => {
@@ -80,6 +84,7 @@ export function SessionPage() {
       void reportApi.getVoice(id).then(setVoice)
       void reportApi.getBody(id).then(setBody)
       void reportApi.getLanguage(id).then(setLanguageRes)
+      api.notes(id).then(setNotes).catch(() => setNotes([]))
       void reportApi.getVoiceEmotion(id).then(setVoiceEmotion)
     }
   }, [session?.status, id, transcript])
@@ -252,10 +257,41 @@ export function SessionPage() {
           {report && (
             <VideoTimeline
               issues={report.issues}
-              markers={session.prompts.map((p, i) => ({ id: `prompt-${i}`, t: p.t, label: p.text, kind: 'prompt' as const }))}
+              markers={[
+                ...session.prompts.map((p, i) => ({ id: `prompt-${i}`, t: p.t, label: p.text, kind: 'prompt' as const })),
+                ...notes.map((n) => ({ id: n.id, t: n.t, label: n.text, kind: 'note' as const })),
+              ]}
               duration={duration || session.duration_s || 0}
               currentTime={currentTime}
               onSeek={seek}
+            />
+          )}
+          {!session.media_deleted && (
+            <div className="flex items-center gap-1 text-sm text-slate-500">
+              <span className="me-1">{t('notes.speed')}</span>
+              {[0.75, 1, 1.25, 1.5].map((r) => (
+                <button
+                  key={r}
+                  type="button"
+                  onClick={() => {
+                    setRate(r)
+                    if (videoRef.current) videoRef.current.playbackRate = r
+                  }}
+                  className={`rounded px-2 py-0.5 tabular-nums ${rate === r ? 'bg-brand-600 text-white' : 'hover:bg-slate-100 dark:hover:bg-slate-800'}`}
+                >
+                  {r}×
+                </button>
+              ))}
+            </div>
+          )}
+          {session.status === 'completed' && (
+            <NotesPanel
+              sessionId={id}
+              notes={notes}
+              onChange={setNotes}
+              currentTime={currentTime}
+              onSeek={seek}
+              pause={() => videoRef.current?.pause()}
             />
           )}
         </div>

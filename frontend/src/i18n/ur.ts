@@ -495,4 +495,11 @@ export const ur: Record<MessageKey, string> = {
   'ach.polyglot_desc': 'دو زبانوں میں مشق کریں۔',
   'ach.improver': 'ترقی کی راہ پر',
   'ach.improver_desc': 'اپنے پہلے اسکور سے 10 پوائنٹ آگے نکلیں۔',
+  'notes.title': 'آپ کے نوٹس',
+  'notes.add_at': '{time} پر نوٹ لکھیں',
+  'notes.placeholder': 'اس لمحے کے بارے میں آپ کیا یاد رکھنا چاہتے ہیں؟',
+  'notes.empty': 'کہیں بھی روکیں اور اس لمحے پر نوٹ لگائیں۔ نوٹس ٹائم لائن اور PDF میں گلابی نشانوں کی صورت میں دکھتے ہیں۔',
+  'notes.edit': 'ترمیم',
+  'notes.save_failed': 'نوٹ محفوظ نہیں ہو سکا۔',
+  'notes.speed': 'رفتار',
 }

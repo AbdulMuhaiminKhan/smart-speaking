@@ -514,6 +514,13 @@ export const en = {
   'ach.polyglot_desc': 'Practice in two languages.',
   'ach.improver': 'On the rise',
   'ach.improver_desc': 'Beat your first score by 10 points.',
+  'notes.title': 'Your notes',
+  'notes.add_at': 'Add note at {time}',
+  'notes.placeholder': 'What do you want to remember about this moment?',
+  'notes.empty': 'Pause anywhere and pin a note to that moment. Notes show as pink pins on the timeline and in the PDF.',
+  'notes.edit': 'Edit',
+  'notes.save_failed': 'The note could not be saved.',
+  'notes.speed': 'Speed',
 } as const
 
 export type MessageKey = keyof typeof en

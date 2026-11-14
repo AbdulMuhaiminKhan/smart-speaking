@@ -132,6 +132,9 @@ class PracticeSession(Base):
     results: Mapped[list[AnalysisResult]] = relationship(
         back_populates="session", cascade="all, delete-orphan"
     )
+    annotations: Mapped[list[Annotation]] = relationship(
+        back_populates="session", cascade="all, delete-orphan", order_by="Annotation.t"
+    )
 
 
 class AnalysisResult(Base):
@@ -147,3 +150,19 @@ class AnalysisResult(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
     session: Mapped[PracticeSession] = relationship(back_populates="results")
+
+
+class Annotation(Base):
+    """A note the speaker pinned to a moment of their video."""
+
+    __tablename__ = "annotations"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    session_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("practice_sessions.id", ondelete="CASCADE"), index=True
+    )
+    t: Mapped[float] = mapped_column(Float)
+    text: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+    session: Mapped[PracticeSession] = relationship(back_populates="annotations")

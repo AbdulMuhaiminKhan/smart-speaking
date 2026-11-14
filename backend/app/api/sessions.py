@@ -16,6 +16,7 @@ from app.config import MODEL_PRESETS, Settings, get_settings
 from app.db.models import (
     TIMED_MODES,
     AnalysisResult,
+    Annotation,
     InputSource,
     PracticeSession,
     SessionMode,
@@ -24,7 +25,7 @@ from app.db.models import (
 )
 from app.db.session import get_db
 from app.pipeline.language import SUPPORTED_LANGUAGES
-from app.schemas.api import Prompt, SessionOut
+from app.schemas.api import AnnotationIn, AnnotationOut, Prompt, SessionOut
 from app.services import storage
 from app.services.queue import Enqueuer, get_enqueuer
 
@@ -231,3 +232,59 @@ def delete_session(session_id: uuid.UUID, db: DbDep, user: UserDep, settings: Se
     db.delete(ps)
     db.commit()
     storage.delete_session_files(settings.media_dir, session_id)
+
+
+# ---- Notes pinned to moments of the video ----------------------------------
+
+MAX_ANNOTATIONS = 200
+
+
+def _owned_annotation(
+    session_id: uuid.UUID, note_id: uuid.UUID, db: Session, user: User
+) -> Annotation:
+    get_owned_session(session_id, db, user)
+    note = db.get(Annotation, note_id)
+    if note is None or note.session_id != session_id:
+        raise error(404, "not_found", "Note not found.")
+    return note
+
+
+@router.get("/{session_id}/annotations", response_model=list[AnnotationOut])
+def list_annotations(session_id: uuid.UUID, db: DbDep, user: UserDep) -> list[Annotation]:
+    return list(get_owned_session(session_id, db, user).annotations)
+
+
+@router.post(
+    "/{session_id}/annotations",
+    response_model=AnnotationOut,
+    status_code=status.HTTP_201_CREATED,
+)
+def add_annotation(
+    session_id: uuid.UUID, body: AnnotationIn, db: DbDep, user: UserDep
+) -> Annotation:
+    ps = get_owned_session(session_id, db, user)
+    if len(ps.annotations) >= MAX_ANNOTATIONS:
+        raise error(409, "too_many_notes", f"A session can have up to {MAX_ANNOTATIONS} notes.")
+    note = Annotation(session_id=ps.id, t=round(body.t, 2), text=body.text.strip())
+    db.add(note)
+    db.commit()
+    db.refresh(note)
+    return note
+
+
+@router.put("/{session_id}/annotations/{note_id}", response_model=AnnotationOut)
+def edit_annotation(
+    session_id: uuid.UUID, note_id: uuid.UUID, body: AnnotationIn, db: DbDep, user: UserDep
+) -> Annotation:
+    note = _owned_annotation(session_id, note_id, db, user)
+    note.t = round(body.t, 2)
+    note.text = body.text.strip()
+    db.commit()
+    db.refresh(note)
+    return note
+
+
+@router.delete("/{session_id}/annotations/{note_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_annotation(session_id: uuid.UUID, note_id: uuid.UUID, db: DbDep, user: UserDep) -> None:
+    db.delete(_owned_annotation(session_id, note_id, db, user))
+    db.commit()

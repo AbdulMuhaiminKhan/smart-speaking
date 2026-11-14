@@ -50,3 +50,15 @@ class HealthOut(BaseModel):
 class ErrorOut(BaseModel):
     code: str
     message: str
+
+
+class AnnotationIn(BaseModel):
+    t: float = Field(ge=0, le=7200)
+    text: str = Field(min_length=1, max_length=2000)
+
+
+class AnnotationOut(AnnotationIn):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    created_at: datetime
